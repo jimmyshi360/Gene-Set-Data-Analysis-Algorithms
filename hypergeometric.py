@@ -18,9 +18,9 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     #NOT IN ANNO##_______##########_______________#######
     #####################################################
 
-    for gsid in sample._genesets:
-        list_anno_overlaps = len(sample._genesets[gsid].intersection(anno_genes))
-        only_list = len(sample._genesets[gsid]) - list_anno_overlaps
+    for gsid in sample.genesets:
+        list_anno_overlaps = len(sample.genesets[gsid].intersection(anno_genes))
+        only_list = len(sample.genesets[gsid]) - list_anno_overlaps
         anno_only = len(anno_genes) - list_anno_overlaps
         genome_only = background_size - list_anno_overlaps - only_list - anno_only if background != None else 0
         p_value = stats.fisher_exact([[list_anno_overlaps, anno_only], [only_list, genome_only]])[1]

@@ -12,5 +12,6 @@ class MAT:
                     (gid, genes) = tok[0], tok[1:]
 
                     self._matrix[gid] = genes
+    @property
     def matrix(self):
         return self._matrix

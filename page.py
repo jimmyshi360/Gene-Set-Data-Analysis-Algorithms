@@ -14,19 +14,19 @@ def page(gmt, mat, output, cluster, false_discovery_rate):
 
     score_arr = []
 
-    for gsid in gmt._genesets:
-        for gene in gmt._genesets[gsid]:
-            row_arr=list(mat._matrix[gene])
+    for gsid in gmt.genesets:
+        for gene in gmt.genesets[gsid]:
+            row_arr=list(mat.matrix[gene])
             score_arr.append(row_arr[cluster])
-            print(str(gene)+" "+str(mat._matrix[gene]))
+            print(str(gene)+" "+str(mat.matrix[gene]))
 
     score_arr=np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
     gene_sd = np.std(score_arr)
 
     #calculate p values based on mean, standard deviation and list sizes
-    for gsid in gmt._genesets:
-        geneset_size = len(gmt._genesets[gsid])
+    for gsid in gmt.genesets:
+        geneset_size = len(gmt.genesets[gsid])
         z_score = (geneset_mean - gene_mean) * math.sqrt(geneset_size) / gene_sd
         p_value = stats.norm.sf(abs(z_score))
         gene_rankings.append([p_value, gsid])
