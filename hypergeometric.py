@@ -4,7 +4,7 @@ import numpy
 import math
 
 
-# fisher exact p values calculated from 2x2 gene set contingency tables (hypergeometric test substitute)
+# fisher exact test, compares an input list of genes against an annotation list and all known/observed genes
 def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     gene_rankings = []
     anno_genes = anno._genes
