@@ -1,22 +1,21 @@
 from scipy import stats
 from flib.core.gmt import GMT
-import numpy
+from output_generator import OUT
 import math
 
-
 # fisher exact test, compares an input list of genes against an annotation list and all known/observed genes
+'''2x2 Contingency Table
+______________________________Gene List_______________All Observed Genes___________
+In Annotations     |                          |                                    |
+------------------------------------------------------------------------------------
+Not in Annotations |                          |                                    |
+------------------------------------------------------------------------------------
+'''
 def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     gene_rankings = []
     anno_genes = anno._genes
     background_size = 0 if background == None else len(background._genes)
     # contruct and analyze contingency tables
-
-    #2x2 Contigency Table
-    ###############LIST########ALL OBSERVED GENES########
-    #####################################################
-    #IN ANNO######_______##########_______________#######
-    #NOT IN ANNO##_______##########_______________#######
-    #####################################################
 
     for gsid in sample.genesets:
         list_anno_overlaps = len(sample.genesets[gsid].intersection(anno_genes))
@@ -26,24 +25,8 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
         p_value = stats.fisher_exact([[list_anno_overlaps, anno_only], [only_list, genome_only]])[1]
         gene_rankings.append([p_value, gsid])
 
-    # sort array in descending order
-    gene_rankings = sorted(gene_rankings, key=lambda line: float(line[0]))
-
-    # grouping significant gene sets and multiple hypothesis test correction (hochberg)
-    significant_values = []
-    for i in range(0, len(gene_rankings)):
-        if gene_rankings[i][0] < float(i) / len(gene_rankings) * false_discovery_rate:
-            significant_values.append(gene_rankings[i])
-    # print rankings and write to output file, reverses ascending array before sorting
-    print("\n\nRANKINGS")
-    for set_arr in gene_rankings[::-1]:
-        output.write(set_arr[1] + ": " + str(set_arr[0]))
-        print(set_arr[1] + ": " + str(set_arr[0]))
-
-    # print all significant gene sets
-    print("\n\nSIGNIFICANT VALUES")
-    for x in significant_values:
-        print(x[1] + " " + str(x[0]))
+    # prints out the rankings and significant values
+    OUT(gene_rankings, output, false_discovery_rate).printout()
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
