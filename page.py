@@ -4,7 +4,8 @@ from mat import MAT
 import numpy as np
 import math
 
-def page(gmt, mat, output,  cluster,false_discovery_rate):
+#parametric analysis gene enrichment test
+def page(gmt, mat, output, cluster, false_discovery_rate):
     gene_rankings = []
     gene_mean = 0
     gene_sd = 0
@@ -21,6 +22,8 @@ def page(gmt, mat, output,  cluster,false_discovery_rate):
     score_arr=np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
     gene_sd = np.std(score_arr)
+
+    #calculate p values based on mean, standard deviation and list sizes
     for gsid in gmt._genesets:
         geneset_size = len(gmt._genesets[gsid])
         z_score = (geneset_mean - gene_mean) * math.sqrt(geneset_size) / gene_sd
@@ -44,8 +47,8 @@ def page(gmt, mat, output,  cluster,false_discovery_rate):
     for x in significant_values:
         print(x[1] + " " + str(x[0]))
 
-gmt = GMT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\list.txt")
-mat = MAT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\clusters.mat")
-output = open("C:\\Users\\Jimmy\\Documents\\GENOMICS\\output.txt", "r+")
+gmt = GMT("test_files\\ec.topgenes0.1only.ec2_enrich_overlap.gmt")
+mat = MAT("test_files\\ec_cluster_toponly_gene_connectivity.mat")
+output = open("test_files\\output.txt", "r+")
 
 page(gmt,mat, output, 0,0.05)

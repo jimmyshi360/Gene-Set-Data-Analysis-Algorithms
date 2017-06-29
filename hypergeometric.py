@@ -9,6 +9,14 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     anno_genes = anno._genes
     background_size = 0 if background == None else len(background._genes)
     # contruct and analyze contingency tables
+
+    #2x2 Contigency Table
+    ###############LIST########ALL OBSERVED GENES#########
+    ######################################################
+    #IN ANNO######_______##########_______________########
+    #NOT IN ANNO##_______##########_______________########
+    ######################################################
+
     for gsid in sample._genesets:
         list_anno_overlaps = len(sample._genesets[gsid].intersection(anno_genes))
         only_list = len(sample._genesets[gsid]) - list_anno_overlaps
@@ -36,9 +44,9 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     for x in significant_values:
         print(x[1] + " " + str(x[0]))
 
-sample = GMT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\list.txt")
-anno = GMT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\anno.txt")
-output = open("C:\\Users\\Jimmy\\Documents\\GENOMICS\\output.txt", "r+")
+sample = GMT("test_files\\ec.topgenes0.1only.ec2_enrich_overlap.gmt")
+anno = GMT("test_files\\gobp_human.closed.gmt")
+output = open("test_files\\output.txt", "r+")
 
 #overloaded method, you can choose to input a background list too
 fisher_exact(sample,anno, output, 0.05)
