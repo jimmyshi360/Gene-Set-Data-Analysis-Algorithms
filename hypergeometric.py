@@ -11,11 +11,11 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     # contruct and analyze contingency tables
 
     #2x2 Contigency Table
-    ###############LIST########ALL OBSERVED GENES#########
-    ######################################################
-    #IN ANNO######_______##########_______________########
-    #NOT IN ANNO##_______##########_______________########
-    ######################################################
+    ###############LIST########ALL OBSERVED GENES########
+    #####################################################
+    #IN ANNO######_______##########_______________#######
+    #NOT IN ANNO##_______##########_______________#######
+    #####################################################
 
     for gsid in sample._genesets:
         list_anno_overlaps = len(sample._genesets[gsid].intersection(anno_genes))
