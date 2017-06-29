@@ -4,24 +4,23 @@ import numpy
 import math
 
 # fisher exact p values calculated from 2x2 gene set contingency tables (hypergeometric test substitute)
-def fisher_exact_test(sample, anno, output, false_discovery_rate, background=None):
+def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     gene_rankings = []
-    anno_genome = anno._genes
+    anno_genes = anno._genes
     background_size = 0 if background == None else len(background._genes)
     # contruct and analyze contingency tables
     for gsid in sample._genesets:
-        list_overlaps = len(sample._genesets[gsid].intersection(anno_genome))
-        in_list_not_anno = len(sample._genesets[gsid]) - list_overlaps
-        not_list_anno = len(anno_genome) - list_overlaps
-        not_in_anno_and_list = background_size - list_overlaps - in_list_not_anno - not_list_anno if background != None else 0
-        next_p_value = stats.fisher_exact([[list_overlaps, not_list_anno], [in_list_not_anno, not_in_anno_and_list]])[1]
-        gene_rankings.append([next_p_value, gsid])
+        list_anno_overlaps = len(sample._genesets[gsid].intersection(anno_genes))
+        only_list = len(sample._genesets[gsid]) - list_anno_overlaps
+        anno_only = len(anno_genes) - list_anno_overlaps
+        genome_only = background_size - list_anno_overlaps - only_list - anno_only if background != None else 0
+        p_value = stats.fisher_exact([[list_anno_overlaps, anno_only], [only_list, genome_only]])[1]
+        gene_rankings.append([p_value, gsid])
 
     # sort array in descending order
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line[0]))
 
-    # grouping significant gene sets and mul
-    # tiple hypothesis test correction (hochberg)
+    # grouping significant gene sets and multiple hypothesis test correction (hochberg)
     significant_values = []
     for i in range(0, len(gene_rankings)):
         if gene_rankings[i][0] < float(i) / len(gene_rankings) * false_discovery_rate:
@@ -41,4 +40,5 @@ sample = GMT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\list.txt")
 anno = GMT("C:\\Users\\Jimmy\\Documents\\GENOMICS\\anno.txt")
 output = open("C:\\Users\\Jimmy\\Documents\\GENOMICS\\output.txt", "r+")
 
-fisher_exact_test(sample,anno, output, 0.05)
+#overloaded method, you can choose to input a background list too
+fisher_exact(sample,anno, output, 0.05)
