@@ -17,7 +17,8 @@ def page(gmt, mat, output, cluster, false_discovery_rate):
     for gsid in gmt._genesets:
         for gene in gmt._genesets[gsid]:
             row_arr=list(mat._matrix[gene])
-            score_arr.append(row_arr[cluster+1])
+            score_arr.append(row_arr[cluster])
+            print(str(gene)+" "+str(mat._matrix[gene]))
 
     score_arr=np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
@@ -47,8 +48,58 @@ def page(gmt, mat, output, cluster, false_discovery_rate):
     for x in significant_values:
         print(x[1] + " " + str(x[0]))
 
-gmt = GMT("test_files\\ec.topgenes0.1only.ec2_enrich_overlap.gmt")
-mat = MAT("test_files\\ec_cluster_toponly_gene_connectivity.mat")
-output = open("test_files\\output.txt", "r+")
 
-page(gmt,mat, output, 0,0.05)
+if __name__ == '__main__':
+    from argparse import ArgumentParser
+
+    usage = "usage: %prog [options]"
+    parser = ArgumentParser(usage, version="%prog dev-unreleased")
+
+    parser.add_argument(
+        "-g",
+        "--gene-list file",
+        dest="gene_list",
+        help="gene list file for comparision",
+        metavar=".gmt FILE",
+        required=True
+        )
+    parser.add_argument(
+        "-c",
+        "--clusters-file",
+        dest="cluster_list",
+        help="cluster file",
+        metavar=".mat FILE",
+        required=True
+        )
+    parser.add_argument(
+        "-o",
+        "--output-file",
+        dest="output",
+        help="file to output",
+        metavar=".txt FILE",
+        required=True
+        )
+    parser.add_argument(
+        "-l",
+        "--cluster number",
+        dest="cluster_number",
+        help="the cluster to run through (DEFAULT 0)",
+        metavar="INTEGER",
+        type=int,
+        default=0)
+    parser.add_argument(
+        "-r",
+        "--false discovery rate",
+        dest="rate",
+        help="a decimal for the false discovery rate (DEFAULT 0.05)",
+        metavar="FLOAT",
+        type=float,
+        default=0.05)
+
+    args = parser.parse_args()
+
+    gmt = GMT(args.gene_list)
+    mat = MAT(args.cluster_list)
+    output = open(args.output, "r+")
+
+    page(gmt,mat, output, args.cluster_number,args.rate)

@@ -3,6 +3,7 @@ from flib.core.gmt import GMT
 import numpy
 import math
 
+
 # fisher exact p values calculated from 2x2 gene set contingency tables (hypergeometric test substitute)
 def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     gene_rankings = []
@@ -44,9 +45,56 @@ def fisher_exact(sample, anno, output, false_discovery_rate, background=None):
     for x in significant_values:
         print(x[1] + " " + str(x[0]))
 
-sample = GMT("test_files\\ec.topgenes0.1only.ec2_enrich_overlap.gmt")
-anno = GMT("test_files\\gobp_human.closed.gmt")
-output = open("test_files\\output.txt", "r+")
+if __name__ == '__main__':
+    from argparse import ArgumentParser
 
-#overloaded method, you can choose to input a background list too
-fisher_exact(sample,anno, output, 0.05)
+    usage = "usage: %prog [options]"
+    parser = ArgumentParser(usage, version="%prog dev-unreleased")
+
+    parser.add_argument(
+        "-g",
+        "--gene-list file",
+        dest="gene_list",
+        help="gene list file for comparision",
+        metavar=".gmt FILE",
+        required = True
+        )
+    parser.add_argument(
+        "-a",
+        "--annotations-file",
+        dest="annotation_list",
+        help="annotation file",
+        metavar=".gmt FILE",
+        required=True
+        )
+    parser.add_argument(
+        "-b",
+        "--background-gene file",
+        dest="background_list",
+        help="background gene list file for comparision (OPTIONAL)",
+        metavar=".gmt FILE"
+        )
+    parser.add_argument(
+        "-o",
+        "--output-file",
+        dest="output",
+        help="file to output",
+        metavar=".txt FILE",
+        required=True
+        )
+    parser.add_argument(
+        "-r",
+        "--false discovery rate",
+        dest="rate",
+        help="a decimal for the false discovery rate (DEFAULT 0.05)",
+        metavar="FLOAT",
+        type=float,
+        default=0.05)
+
+    args = parser.parse_args()
+    sample = GMT(args.gene_list)
+    anno = GMT(args.annotation_list)
+    output = open(args.output,"r+")
+    #overloaded method, you can choose to input a background list too
+    fisher_exact(sample,anno, output, args.rate)
+

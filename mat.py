@@ -9,7 +9,8 @@ class MAT:
                 tok = line.strip().split('\t')
 
                 if tok[0] != "human_entrez":
-                    (gsid, genes) = tok[0], tok[1:]
-                    self._matrix[gsid] = set(genes)
+                    (gid, genes) = tok[0], tok[1:]
+
+                    self._matrix[gid] = genes
     def matrix(self):
         return self._matrix
