@@ -2,7 +2,7 @@
 class OUT:
     def __init__(self, gene_rankings, output, false_discovery_rate):
         self._gene_rankings=gene_rankings
-        self._output=output
+        self._output=open(output,"r+")
         self._false_discovery_rate=false_discovery_rate
 
     def printout(self):
