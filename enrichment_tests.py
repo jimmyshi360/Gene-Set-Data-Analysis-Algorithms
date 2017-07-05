@@ -2,14 +2,13 @@ from scipy import stats
 from flib.core.gmt import GMT
 from output_generator import OUT
 from background import BACKGROUND
+from parsers import Parsers
 from mat import MAT
 import math
 import scipy.stats
 import numpy as np
-from parser_adder import Parsers
-
 '''
-FOR PARSER CHOICES:
+FOR PARSER OTIONS:
 -g = GENE LIST (.gmt)
 -a = ANNOTATIONS LIST (.gmt)
 -b = BACKGROUND LIST (.gmt)
@@ -17,13 +16,13 @@ FOR PARSER CHOICES:
 -l = CLUSTER LIST (.mat)
 -o = OUTPUT (.txt)
 -r = FALSE DISCOVERY RATE (float)
-'''
 
-'''2x2 Contingency Table for Chi Squared and Fisher Exact Tests
+2x2 Contingency Table for Chi Squared and Fisher Exact Tests
+
 ______________________________Gene List_______________All Observed Genes___________
-In Annotations     |                          |                                    |
+In Annotations     |    list_anno_overlaps    |       genome_anno_overlaps         |
 ------------------------------------------------------------------------------------
-Not in Annotations |  list_genome_overlaps    |                                    |
+Not in Annotations |    list_genome_overlaps  |          genome_only               |
 ------------------------------------------------------------------------------------
 '''
 
@@ -32,6 +31,7 @@ p=None
 # fisher exact test on 2x2 contigency tables
 def fisher_exact():
 
+    print(" FISHER EXACT")
     p = Parsers("-g -a -b -o -r")
     sample = GMT(p.args.gene_list)
     anno = GMT(p.args.annotation_list)
@@ -56,6 +56,7 @@ def fisher_exact():
 # chi squared test on 2x2 contigency tables
 def chi_square():
 
+    print("CHI SQUARED")
     p = Parsers("-g -a -b -o -r")
     sample = GMT(p.args.gene_list)
     anno = GMT(p.args.annotation_list)
@@ -71,7 +72,13 @@ def chi_square():
         list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
         genome_anno_overlaps = len(anno_genes) - list_anno_overlaps
         genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
-        p_value = stats.chisquare([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]],1)[1][0]
+        N=float(list_anno_overlaps+genome_anno_overlaps+list_genome_overlaps+genome_only)
+        row1_sum=list_anno_overlaps+list_genome_overlaps
+        row2_sum=list_genome_overlaps+genome_only
+        col1_sum=list_anno_overlaps+list_genome_overlaps
+        col2_sum=genome_anno_overlaps+genome_only
+        expected_table=[[row1_sum*col1_sum/N, row1_sum*col2_sum/N], [row2_sum*col1_sum/N,row2_sum*col2_sum/N]]
+        p_value = stats.chisquare([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]])[1][0]
         gene_rankings.append([p_value, gsid])
 
     # prints out the rankings and significant values
@@ -79,6 +86,7 @@ def chi_square():
 
 #wilcoxon rank sum test, compares an input list of genesets versus scores between two experimental groups
 def wilcoxon():
+    print("WILCOXON")
     p = Parsers("-g -c -o -l -r")
     gmt = GMT(p.args.gene_list)
     mat = MAT(p.args.cluster_list)
@@ -97,17 +105,16 @@ def wilcoxon():
             row_arr = list(mat.matrix[gene])
             if len(row_arr) != 0:
                 total_score_list.append(row_arr[cluster])
-        p_value = scipy.stats.ranksums(score_arr, total_score_list)
+        p_value = stats.ranksums(score_arr, total_score_list)
 
         gene_rankings.append([p_value[1], gsid])
-        gene_rankings = sorted(gene_rankings, key=lambda line: float(line[0]))
 
     # prints out the rankings and significant values
     OUT(gene_rankings, p.args.output, p.args.rate).printout()
 
 #parametric analysis gene enrichment test, compares an input list of genesets versus scores between two experimental groups
 def page():
-
+    print("PAGE")
     p=Parsers("-g -c -o -l -r")
     gmt = GMT(p.args.gene_list)
     mat = MAT(p.args.cluster_list)
@@ -146,6 +153,7 @@ def page():
 #binomial test on 2x2 contingency tables
 def binomial():
 
+    print ("BINOMIAL")
     p = Parsers("-g -a -b -o -r")
     sample = GMT(p.args.gene_list)
     anno = GMT(p.args.annotation_list)
@@ -167,23 +175,13 @@ def binomial():
     # prints out the rankings and significant values
     OUT(gene_rankings, p.args.output, p.args.rate).printout()
 
-#switch case for choosoing the test type
-def test_switch(x):
-    return {
-        1 : fisher_exact(),
-        2: page(),
-        3: binomial(),
-        4: chi_square(),
-        5: wilcoxon()
-    }[x]
-
 if __name__ == '__main__':
 
-    #print("Please choose which test to run\n1) Fisher Exact\n2) PAGE\n3) Binomial\n4) chi_square()\n5) wilcoxon()")
-    #test_switch(int(input()))
+    #over-representation tests
+    #fisher_exact()
+    #binomial()
+    #chi_square()
 
-    fisher_exact(),
-    #page(),
-    #binomial(),
-    #chi_square(),
-    #wilcoxon()
+    #enrichment tests
+    #page()
+    wilcoxon()

@@ -10,7 +10,6 @@ class MAT:
 
                 if tok[0] != "human_entrez":
                     (gid, genes) = tok[0], tok[1:]
-
                     self._matrix[gid] = genes
     @property
     def matrix(self):

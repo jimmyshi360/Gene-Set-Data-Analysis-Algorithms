@@ -19,14 +19,14 @@ class OUT:
         # print rankings and write to output file, reverses ascending array before sorting
         self._output.write("\nRANKINGS")
         print("\nRANKINGS")
-        for set_arr in  self._gene_rankings[::-1]:
-            self._output.write(set_arr[1] + ": " + str(set_arr[0]))
-            print(set_arr[1] + ": " + str(set_arr[0]))
+        for set_arr in  self._gene_rankings:
+            self._output.write(str(set_arr[1]) + ": " + str(set_arr[0]))
+            print(str(set_arr[1]) + ": " + str(set_arr[0]))
 
         significant_values = sorted(significant_values, key=lambda line: float(line[0]))
         # print all significant gene sets
         self._output.write("\nSIGNIFICANT VALUES")
         print("\nSIGNIFICANT VALUES")
-        for x in significant_values[::-1]:
-            self._output.write(x[1] + " " + str(x[0]))
-            print(x[1] + " " + str(x[0]))
+        for x in significant_values:
+            self._output.write(str(x[1]) + " " + str(x[0]))
+            print(str(x[1]) + " " + str(x[0]))
