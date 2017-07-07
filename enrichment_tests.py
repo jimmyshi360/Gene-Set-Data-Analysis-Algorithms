@@ -1,12 +1,19 @@
 from scipy import stats
 from flib.core.gmt import GMT
-from output_generator import OUT
+from anno_ouput_writer import OUT
 from background import BACKGROUND
 from parsers import Parsers
 from mat import MAT
 import math
+import sys
 import scipy.stats
 import numpy as np
+from collections import defaultdict
+from itertools import islice
+import matplotlib.pyplot as plt
+import unittest
+
+import time
 '''
 FOR PARSER OTIONS:
 -g = GENE LIST (.gmt)
@@ -29,64 +36,77 @@ Not in Annotations |    list_genome_overlaps  |          genome_only            
 p=None
 
 # fisher exact test on 2x2 contigency tables
-def fisher_exact():
-
-    print(" FISHER EXACT")
-    p = Parsers("-g -a -b -o -r")
-    sample = GMT(p.args.gene_list)
-    anno = GMT(p.args.annotation_list)
-    background = BACKGROUND(p.args.background_list)
-
-    gene_rankings = []
-    anno_genes = anno._genes
+def fisher_exact(sample, anno, background):
     background_size = 0 if background == None else len(background.background_genes)
+    gene_rankings=[]
+    # contruct and analyze contingency tables
+    for gsid in sample.genesets:
+        for go_id in anno.genesets:
+            current_set=sample.genesets[gsid]
+            list_anno_overlaps = len(current_set.intersection(anno.genesets[go_id]))
+            list_genome_overlaps = len(current_set) - list_anno_overlaps
+            genome_anno_overlaps = len(anno.genesets[go_id]) - list_anno_overlaps
+            genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
+            p_value = stats.fisher_exact([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]])[1]
+
+            gene_rankings.append([gsid, go_id, p_value,  list_anno_overlaps])
+
+    return gene_rankings
+
+# hypergeometric test on 2x2 contigency tables
+def hypergeometric(sample, anno, background):
+    background_size = 0 if background == None else len(background.background_genes)
+    gene_rankings = []
 
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
-        list_anno_overlaps = len(sample.genesets[gsid].intersection(anno_genes))
-        list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
-        genome_anno_overlaps = len(anno_genes) - list_anno_overlaps
-        genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
-        p_value = stats.fisher_exact([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]])[1]
-        gene_rankings.append([p_value, gsid])
+        for go_id in anno.genesets:
+            list_anno_overlaps = len(sample.genesets[gsid].intersection(anno.genesets[go_id]))
+            list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
+            genome_anno_overlaps = len(anno.genesets[go_id]) - list_anno_overlaps
+            genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
+            p_value =stats.hypergeom.sf(list_anno_overlaps-1, genome_anno_overlaps+genome_only,  genome_anno_overlaps, list_anno_overlaps+list_genome_overlaps)
+            gene_rankings.append([gsid, go_id, p_value,  list_anno_overlaps])
+    return gene_rankings
 
-    # prints out the rankings and significant values
-    OUT(gene_rankings, p.args.output, p.args.rate).printout()
+
+#binomial test on 2x2 contingency tables
+def binomial(sample, anno, background):
+    background_size = 0 if background == None else len(background.background_genes)
+    gene_rankings = []
+
+    # contruct and analyze contingency tables
+    for gsid in sample.genesets:
+        for go_id in anno.genesets:
+            list_anno_overlaps = len(sample.genesets[gsid].intersection(anno.genesets[go_id]))
+            list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
+            genome_anno_overlaps = len(anno.genesets[go_id]) - list_anno_overlaps
+            genome_only = background_size if background != None else genome_anno_overlaps
+            p_value = stats.binom_test(list_anno_overlaps, len(sample.genesets[gsid]), float(genome_anno_overlaps)/genome_only)
+            gene_rankings.append([gsid, go_id, p_value,  list_anno_overlaps])
+
+    return gene_rankings
 
 # chi squared test on 2x2 contigency tables
-def chi_square():
-
-    print("CHI SQUARED")
-    p = Parsers("-g -a -b -o -r")
-    sample = GMT(p.args.gene_list)
-    anno = GMT(p.args.annotation_list)
-    background = BACKGROUND(p.args.background_list)
-
-    gene_rankings = []
-    anno_genes = anno._genes
+def chi_squared(sample, anno, background):
     background_size = 0 if background == None else len(background.background_genes)
+    gene_rankings = []
 
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
-        list_anno_overlaps = len(sample.genesets[gsid].intersection(anno_genes))
-        list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
-        genome_anno_overlaps = len(anno_genes) - list_anno_overlaps
-        genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
-        N=float(list_anno_overlaps+genome_anno_overlaps+list_genome_overlaps+genome_only)
-        row1_sum=list_anno_overlaps+list_genome_overlaps
-        row2_sum=list_genome_overlaps+genome_only
-        col1_sum=list_anno_overlaps+list_genome_overlaps
-        col2_sum=genome_anno_overlaps+genome_only
-        expected_table=[[row1_sum*col1_sum/N, row1_sum*col2_sum/N], [row2_sum*col1_sum/N,row2_sum*col2_sum/N]]
-        p_value = stats.chisquare([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]])[1][0]
-        gene_rankings.append([p_value, gsid])
+        for go_id in anno.genesets:
+            list_anno_overlaps = len(sample.genesets[gsid].intersection(anno.genesets[go_id]))
+            list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
+            genome_anno_overlaps = len(anno.genesets[go_id]) - list_anno_overlaps
+            genome_only = background_size - list_anno_overlaps - list_genome_overlaps - genome_anno_overlaps if background != None else 0
+            p_value = stats.chisquare([[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]])[1][0]
+            gene_rankings.append([gsid, go_id, p_value,  list_anno_overlaps])
 
-    # prints out the rankings and significant values
-    OUT(gene_rankings, p.args.output, p.args.rate).printout()
+    return gene_rankings
 
 #wilcoxon rank sum test, compares an input list of genesets versus scores between two experimental groups
 def wilcoxon():
-    print("WILCOXON")
+    print("\nWILCOXON")
     p = Parsers("-g -c -o -l -r")
     gmt = GMT(p.args.gene_list)
     mat = MAT(p.args.cluster_list)
@@ -96,25 +116,25 @@ def wilcoxon():
     gene_rankings = []
 
     for gsid in gmt.genesets:
+
         for gene in gmt.genesets[gsid]:
             row_arr = list(mat.matrix[gene])
             if len(row_arr) != 0:
                 score_arr.append(row_arr[cluster])
-            total_score_list = []
+        total_score_list = []
         for gene in mat.matrix.keys():
             row_arr = list(mat.matrix[gene])
             if len(row_arr) != 0:
                 total_score_list.append(row_arr[cluster])
         p_value = stats.ranksums(score_arr, total_score_list)
-
         gene_rankings.append([p_value[1], gsid])
 
     # prints out the rankings and significant values
-    OUT(gene_rankings, p.args.output, p.args.rate).printout()
+    return OUT(gene_rankings, p.args.output, p.args.rate).printout()
 
 #parametric analysis gene enrichment test, compares an input list of genesets versus scores between two experimental groups
 def page():
-    print("PAGE")
+    print("\nPAGE")
     p=Parsers("-g -c -o -l -r")
     gmt = GMT(p.args.gene_list)
     mat = MAT(p.args.cluster_list)
@@ -148,40 +168,66 @@ def page():
         gene_rankings.append([p_value, gsid])
 
     #prints out the rankings and significant values
-    OUT(gene_rankings, p.args.output, p.args.rate).printout()
+        return OUT(gene_rankings, p.args.output, p.args.rate).printout()
 
-#binomial test on 2x2 contingency tables
-def binomial():
+def over_rep_test(test_name, print_option, sample=None, anno=None, background=None, rate=None, output=None):
+    use_parsers = False
+    if sample == None:
+        p = Parsers("-g -a -b -o -r")
+        sample = GMT(p.args.gene_list)
+        anno = GMT(p.args.annotation_list)
+        background = BACKGROUND(p.args.background_list)
+        use_parsers = True
+    else:
+        sample = GMT(sample)
+        anno = GMT(anno)
+        background = BACKGROUND(background)
 
-    print ("BINOMIAL")
-    p = Parsers("-g -a -b -o -r")
-    sample = GMT(p.args.gene_list)
-    anno = GMT(p.args.annotation_list)
-    background = BACKGROUND(p.args.background_list)
-
-    gene_rankings = []
-    anno_genes = anno._genes
-    background_size = 0 if background == None else len(background.background_genes)
-
-    # contruct and analyze contingency tables
-    for gsid in sample.genesets:
-        list_anno_overlaps = len(sample.genesets[gsid].intersection(anno_genes))
-        list_genome_overlaps = len(sample.genesets[gsid]) - list_anno_overlaps
-        genome_anno_overlaps = len(anno_genes) - list_anno_overlaps
-        genome_only = background_size if background != None else genome_anno_overlaps
-        p_value = stats.binom_test(list_anno_overlaps, len(sample.genesets[gsid]), float(genome_anno_overlaps)/genome_only)
-        gene_rankings.append([p_value, gsid])
+    if test_name=="fisher_exact":
+        gene_rankings=fisher_exact(sample,anno,background)
+    elif test_name=="chi_squared":
+        gene_rankings=chi_squared(sample,anno,background)
+    elif test_name=="binomial":
+        gene_rankings=binomial(sample,anno,background)
+    elif test_name=="hypergeometric":
+        gene_rankings=hypergeometric(sample,anno,background)
 
     # prints out the rankings and significant values
-    OUT(gene_rankings, p.args.output, p.args.rate).printout()
+    if use_parsers:
+        return OUT(gene_rankings, p.args.output, p.args.rate, sample, anno).printout(print_option)
+    else:
+        return OUT(gene_rankings, output, rate, sample, anno).printout(print_option)
+
+
+class TestStattests(unittest.TestCase):
+    def test_binomial(self):
+        self.assertEqual(len(over_rep_test("binomial", False, "GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")),
+                         1264)
+        self.assertEqual(over_rep_test("binomial", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")[3],
+                         ["0", "17", "GO:0090083", "6", "0", "1.0", "0.0297153710663"])
+
+    def test_fisher(self):
+        self.assertEqual(len(over_rep_test("fisher_exact", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")),
+                         1263)
+        self.assertEqual(over_rep_test("fisher_exact", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")[3],
+                         ["0", "17", "GO:0090083", "6", "0", "1.0", "0.0303094331668"])
+
+    def test_chi_squared(self):
+        self.assertEqual(
+            len(over_rep_test("chi_squared", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")), 40106)
+        self.assertEqual(over_rep_test("chi_squared", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")[3],
+                         ["0", "17", "GO:0090344", "6", "0", "3.73798184017e-05", "0.045758367941"])
+
+    def test_hypergeometric(self):
+        self.assertEqual(
+            len(over_rep_test("hypergeometric", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")), 1268)
+        self.assertEqual(over_rep_test("hypergeometric", False,"GMT.gmt", "GO.gmt", "BACKGROUND.txt", 0.05, "OUTPUT.txt")[3],
+                         ["0", "17", "GO:0090083", "6", "0", "1.0", "0.0295011396605"])
 
 if __name__ == '__main__':
 
-    #over-representation tests
-    #fisher_exact()
-    #binomial()
-    #chi_square()
+    #choose fisher_exact, chi_squared, hypergeometric, or binomial
+    print("TESTING")
+suite = unittest.TestLoader().loadTestsFromTestCase(TestStattests)
+unittest.TextTestRunner(verbosity=2).run(suite)
 
-    #enrichment tests
-    #page()
-    wilcoxon()

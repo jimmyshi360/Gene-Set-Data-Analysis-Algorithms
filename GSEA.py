@@ -1,6 +1,6 @@
 from scipy import stats
 from flib.core.gmt import GMT
-from output_generator import OUT
+from anno_ouput_writer import OUT
 from background import BACKGROUND
 from parsers import Parsers
 from mat import MAT
@@ -44,6 +44,7 @@ def enrichment_score(gene_set, cluster, mat, weight):
     plt.ylabel("ES Plot")
     plt.show()
     '''
+
     return max_ES
 
 def permute(mat, gene_set, cluster):
@@ -52,12 +53,18 @@ def permute(mat, gene_set, cluster):
 
 def es_distr(set,mat,cluster):
     es_arr=[]
-    for i in range(0,100):
+    for i in range(0,50):
         es_arr.append(enrichment_score(permute(mat,set,cluster),cluster,mat.matrix,1))
     return es_arr
 
-def gsea(sample, mat,cluster):
+def gsea():
 
+    print("\nGSEA")
+    p = Parsers("-g -c -l -o -r")
+    sample = GMT(p.args.gene_list)
+    mat = MAT(p.args.cluster_list)
+    cluster = p.args.cluster_number
+    print sample
     gene_rankings=[]
     for gsid in sample.genesets:
         es=enrichment_score(sample.genesets[gsid], cluster, mat.matrix, 1)
@@ -74,7 +81,7 @@ def gsea(sample, mat,cluster):
 
         gene_rankings.append([n_p,gsid])
     # prints out the rankings and significant values
-    OUT(gene_rankings,"OUTPUT.txt",0.05).printout()
+    OUT(gene_rankings,p.args.output, p.args.rate).printout()
 
 def normalize_score(es, es_arr):
     total = 0
@@ -117,4 +124,4 @@ def n_p_value(es, es_arr):
                 tail.append(e)
         return float(len(tail))/float(len(es_arr))
 
-gsea(GMT("GMT.gmt"), MAT("CLUSTERS.mat"), 0)
+gsea()

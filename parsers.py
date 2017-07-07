@@ -63,9 +63,9 @@ class Parsers:
         if parsers.count("-r") == 1:
             parser.add_argument(
                 "-r",
-                "--false discovery rate",
+                "--the alpha level for the test",
                 dest="rate",
-                help="a decimal for the false discovery rate (DEFAULT 0.05)",
+                help="a decimal for the alpha rate (DEFAULT 0.05)",
                 metavar="FLOAT",
                 type=float,
                 default=0.05)
