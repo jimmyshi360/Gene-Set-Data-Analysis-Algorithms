@@ -1,0 +1,4 @@
+
+gs1	gs1.ngenes	gs2	gs2.ngenes	ncommon	pvalue	FDR
+0	300	0	40	3	0.0219349067622	0.0219349067622
+64
