@@ -11,7 +11,7 @@ from enrichment_output_writer import OUT
 from utilities.mat import MAT
 from utilities.parsers import Parsers
 
-
+score_arr=[]
 # builds general multiprocessing inputs for all statistical methods
 def build_inputs(anno, cluster, mat):
     input_arr = []
@@ -20,9 +20,9 @@ def build_inputs(anno, cluster, mat):
     return input_arr
 
 
-# completes the input array for each sepcific GSEA sample gene set and executes a multiprocess mapping inputs to all GO gene sets
-def complete_G_inputs(map_arr, method):
-    p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+#starts multiprocessing the specified method
+def multiprocess(map_arr, method):
+    p = multiprocessing.Pool(processes=multiprocessing.cpu_count()-1)
     results = p.map(method, map_arr)
     p.close()
     p.join()
@@ -94,7 +94,7 @@ def es_distr(mat, cluster, permuted_arr):
 def gsea(mat, anno, cluster):
     gene_rankings = []
     input_arr = build_inputs(anno, cluster, mat)
-    items = complete_G_inputs(input_arr, gsea_process)
+    items = multiprocess(input_arr, gsea_process)
     for i in items:
         gene_rankings.append([i[0], i[1], i[2], i[3], i[4]])
     # prints out the rankings and significant values
@@ -144,39 +144,41 @@ def n_p_value(es, es_arr):
 
 
 # wilcoxon rank sum test, compares an input list of genesets versus scores between two experimental groups
-# UNFINISHED
-def wilcoxon():
-    print("\nWILCOXON")
-    p = Parsers("-a -c -o -l -r")
-    anno = GMT(p.args.annotation_list)
-    mat = MAT(p.args.cluster_list)
-    cluster = p.args.cluster_number
+def wilcoxon(mat,anno,cluster):
 
+    global score_arr
     score_arr = []
-    gene_rankings = []
-
-    for go_id in anno.genesets:
-
-        for gene in gmt.genesets[gsid]:
-            row_arr = list(mat.matrix[gene])
-            if len(row_arr) != 0:
-                score_arr.append(row_arr[cluster])
-        total_score_list = []
-        for gene in mat.matrix.keys():
-            row_arr = list(mat.matrix[gene])
-            if len(row_arr) != 0:
-                total_score_list.append(row_arr[cluster])
-        p_value = stats.ranksums(score_arr, total_score_list)
-        gene_rankings.append([p_value[1], gsid])
-
+    t1=time.time()
+    input_arr=build_inputs(anno,cluster,mat)
+    gene_rankings= multiprocess(input_arr, wilcoxon_process)
     # prints out the rankings and significant values
-    return OUT(gene_rankings, p.args.output, p.args.rate).printout_GSEA()
+    print time.time()-t1
+    return gene_rankings
 
+def wilcoxon_process(m_arr):
+
+    for gene in m_arr[1]:
+        row_arr = []
+        if gene in m_arr[3]:
+            row_arr = list(m_arr[3][gene])
+        if len(row_arr) != 0:
+            score_arr.append(float(row_arr[m_arr[2]]))
+        else:
+            break
+    total_score_list = []
+    for gene in m_arr[3]:
+        row_arr = list(m_arr[3][gene])
+        if len(row_arr) != 0 and row_arr[m_arr[2]]:
+            total_score_list.append(row_arr[m_arr[2]])
+    p_value = stats.ranksums(score_arr, total_score_list)[1]
+
+    return [m_arr[2], m_arr[0], p_value]
 
 # parametric analysis gene enrichment test, compares an input list of genesets versus scores between two experimental groups
 def page(mat, anno, cluster):
     score_arr = []
     # calculate value related to the entire cluster
+    t1=time.time()
     for i in mat.matrix:
         score_arr.append(list(mat.matrix[i])[cluster])
     score_arr = np.array(score_arr).astype(np.float)
@@ -189,8 +191,8 @@ def page(mat, anno, cluster):
         input_arr_copy[i] = [input_arr_copy[i][0], input_arr_copy[i][1], input_arr_copy[i][2], input_arr_copy[i][3],
                              gene_mean, gene_sd]
 
-    gene_rankings = complete_G_inputs(input_arr_copy, page_process)
-
+    gene_rankings = multiprocess(input_arr_copy, page_process)
+    print time.time()-t1
     return gene_rankings
 
 # page multiprocess method
@@ -249,4 +251,4 @@ def enrichment_test(test_name, print_option, mat=None, anno=None, rate=None, out
 
 if __name__ == '__main__':
     # choose fisher_exact, chi_squared, hypergeometric, or binomial
-    enrichment_test("gsea", True)
+    enrichment_test("page", True)

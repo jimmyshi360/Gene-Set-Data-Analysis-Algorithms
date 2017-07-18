@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 
 from flib.core.gmt import GMT
 from scipy import stats
@@ -53,7 +54,7 @@ def multiprocess(gsid, sample, map_arr, method):
     for i in range(0, len(map_arr)):
         map_arr_copy[i] = [map_arr_copy[i][0], map_arr_copy[i][1], map_arr_copy[i][2], gsid, sample.genesets[gsid]]
 
-    p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+    p = multiprocessing.Pool(processes=multiprocessing.cpu_count()-1)
     results = p.map(method, map_arr_copy)
     p.close()
     p.join()
@@ -63,6 +64,7 @@ def multiprocess(gsid, sample, map_arr, method):
 
 # generate contingency table
 def gen_table(sample_set, anno_set, background):
+
     list_anno_overlaps = len(sample_set.intersection(anno_set))
     background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if background == None else len(background.background_genes)
     list_genome_overlaps = len(sample_set) - list_anno_overlaps
@@ -74,6 +76,7 @@ def gen_table(sample_set, anno_set, background):
 
 # fisher exact test on 2x2 contigency tables
 def fisher_exact(sample, anno, background):
+    t1=time.time()
     gene_rankings = []
     # contruct and analyze contingency tables
     map_arr = generate_inputs(anno, background)
@@ -82,7 +85,7 @@ def fisher_exact(sample, anno, background):
         items = multiprocess(gsid, sample, map_arr, fisher_process)
         for i in range(0, len(items)):
             gene_rankings.append(items[i])
-
+    print time.time()-t1
     return gene_rankings
 
 
