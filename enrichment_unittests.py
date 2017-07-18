@@ -1,8 +1,6 @@
 import unittest
 
-from flib.core.gmt import GMT
-
-from overrep_tests import *
+from enrichment_tests import *
 from utilities.background import BACKGROUND
 
 

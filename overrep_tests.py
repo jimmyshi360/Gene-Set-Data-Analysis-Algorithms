@@ -40,7 +40,7 @@ p = None
 
 # generates a list of inputs to be mapped to several processors
 # each parameter will be an array of terms
-def build_inputs(anno, background):
+def generate_inputs(anno, background):
     input_arr = []
     for go_id in anno.genesets:
         input_arr.append([go_id, anno.genesets[go_id], background])
@@ -64,12 +64,11 @@ def multiprocess(gsid, sample, map_arr, method):
 # generate contingency table
 def gen_table(sample_set, anno_set, background):
     list_anno_overlaps = len(sample_set.intersection(anno_set))
-    background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if background == None else len(
-        background.background_genes)
+    background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if background == None else len(background.background_genes)
     list_genome_overlaps = len(sample_set) - list_anno_overlaps
-    genome_anno_overlaps = len(anno_set.intersection(background.background_genes)) if background != None else len(
-        anno_set)
+    genome_anno_overlaps = len(anno_set.intersection(background.background_genes)) if background != None else len(anno_set)
     genome_only = background_size - genome_anno_overlaps
+
     return [[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]]
 
 
@@ -77,7 +76,7 @@ def gen_table(sample_set, anno_set, background):
 def fisher_exact(sample, anno, background):
     gene_rankings = []
     # contruct and analyze contingency tables
-    map_arr = build_inputs(anno, background)
+    map_arr = generate_inputs(anno, background)
 
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, fisher_process)
@@ -97,7 +96,7 @@ def fisher_process(m_arr):
 # hypergeometric test on 2x2 contigency tables
 def hypergeometric(sample, anno, background):
     gene_rankings = []
-    map_arr = build_inputs(anno, background)
+    map_arr = generate_inputs(anno, background)
 
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, hypergeometric_process)
@@ -105,7 +104,7 @@ def hypergeometric(sample, anno, background):
             gene_rankings.append(items[i])
     return gene_rankings
 
-# hypergeometric sub-method for multiprocessing
+# hypergeometric sub-method for multiprocessing, m_arr contains the parameters
 def hypergeometric_process(m_arr):
     table = gen_table(m_arr[4], m_arr[1], m_arr[2])
     p_value = stats.hypergeom.sf(table[0][0] - 1, table[0][1] + table[1][1], table[0][1], table[0][0] + table[1][0])
@@ -115,7 +114,7 @@ def hypergeometric_process(m_arr):
 # binomial test on 2x2 contingency tables
 def binomial(sample, anno, background):
     gene_rankings = []
-    map_arr = build_inputs(anno, background)
+    map_arr = generate_inputs(anno, background)
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, binomial_process)
@@ -133,7 +132,7 @@ def binomial_process(m_arr):
 # chi squared test on 2x2 contigency tables
 def chi_squared(sample, anno, background):
     gene_rankings = []
-    map_arr = build_inputs(anno, background)
+    map_arr = generate_inputs(anno, background)
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, chi_process)
@@ -150,6 +149,8 @@ def chi_process(m_arr):
 # wrapper method for integrating parsers and all overrep tests
 def over_rep_test(test_name, print_option, sample=None, anno=None, background=None, rate=None, output=None):
     use_parsers = False
+
+    # if there is no sample input, then parsers are used, sets everything for use with parsers
     if sample == None:
         p = Parsers("-g -a -b -o -r")
         sample = GMT(p.args.gene_list)
