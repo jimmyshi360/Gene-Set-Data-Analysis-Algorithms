@@ -19,7 +19,7 @@ class TestStattests(unittest.TestCase):
         self.assertEqual(gen_table(sample, anno, background)[1][0], 297)
         self.assertEqual(gen_table(sample, anno, background)[1][1], 19960)
 
-    def test_build_inputs(self):
+    def test_generate_inputs(self):
         anno = GMT(os.path.join("unittest_files","test_go.gmt"))
         background = BACKGROUND([],os.path.join("unittest_files","test_background.txt"))
         self.assertEqual(generate_inputs(anno, background)[0][0], '0')
@@ -35,14 +35,14 @@ class TestStattests(unittest.TestCase):
         sample = os.path.join("unittest_files","test_gmt.gmt")
         background = os.path.join("unittest_files","test_background.txt")
         output= os.path.join("unittest_files","test_output.txt")
-        self.assertAlmostEqual(float(over_rep_test("binomial", False, sample, anno, background, 0.05, output)[0][5]), 0.0229768421702,delta=0.00001)
+        self.assertAlmostEqual(float(over_rep_test("binomial", False, sample, anno, background, 0.05, output)[0][5]), 0.0229768421702,delta=0.0001)
 
     def test_fisher(self):
         anno = os.path.join("unittest_files","test_go.gmt")
         sample =  os.path.join("unittest_files","test_gmt.gmt")
         background = os.path.join("unittest_files","test_background.txt")
         output = os.path.join("unittest_files","test_output.txt")
-        self.assertAlmostEqual(float(over_rep_test("fisher_exact", False,sample, anno, background, 0.05, output)[0][5]),0.0255246814673,delta=0.00001)
+        self.assertAlmostEqual(float(over_rep_test("fisher_exact", False,sample, anno, background, 0.05, output)[0][5]),0.0255246814673,delta=0.0001)
 
 
     def test_chi_squared(self):
@@ -50,7 +50,7 @@ class TestStattests(unittest.TestCase):
         sample = os.path.join("unittest_files","test_gmt.gmt")
         background = os.path.join("unittest_files","test_background.txt")
         output = os.path.join("unittest_files","test_output.txt")
-        self.assertAlmostEqual(float(over_rep_test("chi_squared", False,sample, anno, background, 0.05, output)[0][5]), 1.27701446634e-64,delta=0.00001)
+        self.assertAlmostEqual(float(over_rep_test("chi_squared", False,sample, anno, background, 0.05, output)[0][5]), 1.27701446634e-64,delta=0.0001)
 
 
     def test_hypergeometric(self):
@@ -60,7 +60,7 @@ class TestStattests(unittest.TestCase):
         output = os.path.join("unittest_files","test_output.txt")
 
         self.assertAlmostEqual(
-        float(over_rep_test("hypergeometric", False,sample, anno, background, 0.05, output)[0][5]), 0.0219349067622,delta=0.00001)
+        float(over_rep_test("hypergeometric", False,sample, anno, background, 0.05, output)[0][5]), 0.0219349067622,delta=0.0001)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestStattests)

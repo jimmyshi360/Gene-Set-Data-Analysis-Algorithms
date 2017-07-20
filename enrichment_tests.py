@@ -14,7 +14,7 @@ from collections import defaultdict
 args=None
 score_arr=[]
 # builds general multiprocessing inputs for all statistical methods
-def build_inputs(anno, cluster, rankings,permutations=None):
+def generate_inputs(anno, cluster, rankings, permutations=None):
 
     input_arr = []
     for go_id in anno.genesets:
@@ -22,7 +22,6 @@ def build_inputs(anno, cluster, rankings,permutations=None):
             input_arr.append([go_id, anno.genesets[go_id], cluster, rankings,permutations])
         else:
             input_arr.append([go_id, anno.genesets[go_id], cluster, rankings])
-
     return input_arr
 
 
@@ -55,9 +54,11 @@ def enrichment_score(anno, cluster, rankings, weight):
     for i in anno:
         anno_map[i]=0
     rankings_map=rankings.dict
+
     Nhint = len(anno)
     N = len(rankings.dict)
     set_score_sum = 0
+
     for id in anno:
         if id in rankings_map and len(list(rankings_map[id])) != 0:
             set_score_sum += (float(list(rankings_map[id])[cluster])) ** weight
@@ -99,7 +100,7 @@ def gsea(rankings, anno, cluster,permutations):
     t1=time.time()
     rankings.sort(cluster)
     gene_rankings = []
-    input_arr = build_inputs(anno, cluster, rankings,permutations)
+    input_arr = generate_inputs(anno, cluster, rankings, permutations)
     items = multiprocess(input_arr, gsea_process)
     print time.time()-t2
     for i in items:
@@ -148,6 +149,7 @@ def n_p_value(es, es_arr):
         for e in es_arr:
             if e <= es:
                 tail.append(e)
+
         return float(len(tail)) / float(len(es_arr))
 
 
@@ -157,10 +159,11 @@ def wilcoxon(rankings, anno, cluster):
     global score_arr
     score_arr = []
     t1=time.time()
-    input_arr=build_inputs(anno, cluster, rankings)
+    input_arr=generate_inputs(anno, cluster, rankings)
     gene_rankings= multiprocess(input_arr, wilcoxon_process)
     # prints out the rankings and significant values
     print time.time()-t1
+
     return gene_rankings
 
 def wilcoxon_process(m_arr):
@@ -192,7 +195,7 @@ def page(rankings, anno, cluster):
     score_arr = np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
     gene_sd = np.std(score_arr)
-    input_arr = build_inputs(anno, cluster, rankings)
+    input_arr = generate_inputs(anno, cluster, rankings)
     input_arr_copy = list(input_arr)
 
     for i in range(0, len(input_arr)):
