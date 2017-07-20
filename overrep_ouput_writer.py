@@ -12,21 +12,12 @@ class OUT:
 
     #FDR correction for multiple hypothesis testing
     def benjamini_hochberg(self):
-        prev_bh_value = 0
         for i in range(0, len(self._gene_rankings)):
             bh_value = self._gene_rankings[i][2] * len(self._gene_rankings) / float(i + 1)
             bh_value = min(bh_value, 1)
 
-            # to preserve monotonicity (matches R outputs from p.adjust)
-            if prev_bh_value != 0:
-                prev_bh_value = min(bh_value, prev_bh_value)
-                if prev_bh_value< self._alpha:
-                    self._significant_values.append(self._gene_rankings[i])
-                    self._adjusted_p_values.append(prev_bh_value)
-            if i == len(self._gene_rankings) - 1 and bh_value:
-                self._significant_values.append(self._gene_rankings[i])
-                self._adjusted_p_values.append(bh_value)
-            prev_bh_value = bh_value
+            self._significant_values.append(self._gene_rankings[i])
+            self._adjusted_p_values.append(bh_value)
 
     # printing function
     def printout(self, print_option):

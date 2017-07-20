@@ -1,30 +1,32 @@
-import multiprocessing
-import time
-import math
+import sys
 
-def square_numbers(numbers):
-    square_result = []
-    for n in (0,numbers):
-        square_result.append(math.factorial(int (n)))
-    return 2
+from _winreg import *
 
-def n_test():
-    square_result = []
-    for i in range(0,5500):
-            square_result.append(math.factorial(int (i)))
-    return 2
+# tweak as necessary
+version = sys.version[:3]
+installpath = sys.prefix
 
+regpath = "SOFTWARE\\Python\\Pythoncore\\%s\\" % (version)
+installkey = "InstallPath"
+pythonkey = "PythonPath"
+pythonpath = "%s;%s\\Lib\\;%s\\DLLs\\" % (
+    installpath, installpath, installpath
+)
+
+def RegisterPy():
+    try:
+        reg = OpenKey(HKEY_LOCAL_MACHINE, regpath)
+    except EnvironmentError:
+        try:
+            reg = CreateKey(HKEY_LOCAL_MACHINE, regpath)
+        except Exception, e:
+            print "*** Unable to register: %s" % e
+            return
+
+    SetValue(reg, installkey, REG_SZ, installpath)
+    SetValue(reg, pythonkey, REG_SZ, pythonpath)
+    CloseKey(reg)
+    print "--- Python %s at %s is now registered!" % (version, installpath)
 
 if __name__ == "__main__":
-    numbers = list(range(5500))
-
-    t1 = time.time()
-
-    p1 = multiprocessing.Pool(processes=8)
-    r=p1.map(square_numbers,numbers)
-    p1.close()
-
-    t2 = time.time()
-
-
-    print t2-t1
+    RegisterPy()

@@ -1,8 +1,11 @@
 
 class BACKGROUND:
-    def __init__(self, filename=None):
+    def __init__(self, gene_set, filename=None):
         self._background_genes=[]
-        if filename:
+
+        if filename==None:
+            self._background_genes=list(gene_set)
+        else:
             matfile = open(filename)
             for line in matfile:
                 tok = line.strip().split('\t')
