@@ -1,32 +1,12 @@
-import sys
+import numpy as np
 
-from _winreg import *
+def p_adjust_bh(p):
+    """Benjamini-Hochberg p-value correction for multiple hypothesis testing."""
+    p = np.asfarray(p)
+    by_descend = p.argsort()[::-1]
+    by_orig = by_descend.argsort()
+    steps = float(len(p)) / np.arange(len(p), 0, -1)
+    q = np.minimum(1, np.minimum.accumulate(steps * p[by_descend]))
+    return q[by_orig]
 
-# tweak as necessary
-version = sys.version[:3]
-installpath = sys.prefix
-
-regpath = "SOFTWARE\\Python\\Pythoncore\\%s\\" % (version)
-installkey = "InstallPath"
-pythonkey = "PythonPath"
-pythonpath = "%s;%s\\Lib\\;%s\\DLLs\\" % (
-    installpath, installpath, installpath
-)
-
-def RegisterPy():
-    try:
-        reg = OpenKey(HKEY_LOCAL_MACHINE, regpath)
-    except EnvironmentError:
-        try:
-            reg = CreateKey(HKEY_LOCAL_MACHINE, regpath)
-        except Exception, e:
-            print "*** Unable to register: %s" % e
-            return
-
-    SetValue(reg, installkey, REG_SZ, installpath)
-    SetValue(reg, pythonkey, REG_SZ, pythonpath)
-    CloseKey(reg)
-    print "--- Python %s at %s is now registered!" % (version, installpath)
-
-if __name__ == "__main__":
-    RegisterPy()
+print p_adjust_bh([0.001,0.0015, 0.002, 0.00234, 0.02, 0.025, 0.3])

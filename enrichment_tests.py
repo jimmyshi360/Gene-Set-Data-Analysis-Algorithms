@@ -95,19 +95,17 @@ def es_distr(rankings, cluster, anno,permutations):
 
 
 # gsea main method to call
-def gsea(rankings, anno, cluster,permutations):
-    t2 = time.time()
-    t1=time.time()
+def gsea(rankings, anno, cluster,permutations, alpha):
+
     rankings.sort(cluster)
     gene_rankings = []
     input_arr = generate_inputs(anno, cluster, rankings, permutations)
     items = multiprocess(input_arr, gsea_process)
-    print time.time()-t2
+
     for i in items:
         gene_rankings.append([i[0], i[1], i[2], i[3], i[4],i[5]])
     # prints out the rankings and significant values
-    print time.time()-t1
-    return gene_rankings
+    return [gene_rankings,significance_filter(gene_rankings,alpha)]
 
 
 def normalize_score(es, es_arr):
@@ -154,17 +152,16 @@ def n_p_value(es, es_arr):
 
 
 # wilcoxon rank sum test, compares an input list of genesets versus scores between two experimental groups
-def wilcoxon(rankings, anno, cluster):
+def wilcoxon(rankings, anno, cluster,alpha):
 
     global score_arr
     score_arr = []
-    t1=time.time()
+
     input_arr=generate_inputs(anno, cluster, rankings)
     gene_rankings= multiprocess(input_arr, wilcoxon_process)
-    # prints out the rankings and significant values
-    print time.time()-t1
 
-    return gene_rankings
+    rankings_final=benjamini_hochberg(gene_rankings)
+    return [rankings_final,significance_filter(rankings_final, alpha)]
 
 def wilcoxon_process(m_arr):
 
@@ -186,7 +183,7 @@ def wilcoxon_process(m_arr):
     return [m_arr[2], m_arr[0], p_value]
 
 # parametric analysis gene enrichment test, compares an input list of genesets versus scores between two experimental groups
-def page(rankings, anno, cluster):
+def page(rankings, anno, cluster, alpha):
     score_arr = []
     # calculate value related to the entire cluster
 
@@ -198,13 +195,14 @@ def page(rankings, anno, cluster):
     input_arr = generate_inputs(anno, cluster, rankings)
     input_arr_copy = list(input_arr)
 
-    for i in range(0, len(input_arr)):
-        input_arr_copy[i] = [input_arr_copy[i][0], input_arr_copy[i][1], input_arr_copy[i][2], input_arr_copy[i][3],
+    for i, row in enumerate(input_arr_copy):
+        input_arr_copy[i] = [row[0], row[1], row[2], row[3],
                              gene_mean, gene_sd]
 
     gene_rankings = multiprocess(input_arr_copy, page_process)
 
-    return gene_rankings
+    rankings_final = benjamini_hochberg(gene_rankings)
+    return [rankings_final,significance_filter(rankings_final, alpha)]
 
 # page multiprocess method
 def page_process(m_arr):
@@ -225,40 +223,57 @@ def page_process(m_arr):
     p_value = stats.norm.sf(abs(z_score))
     return [m_arr[2], m_arr[0], p_value]
 
-# wrapper function to call enrichmenet tests
-def enrichment_test(test_name, print_option, rankings=None, anno=None, rate=None, output=None, cluster=None, permutations=None):
-    use_parsers = False
+# wrapper function to call enrichment tests
+def enrichment_test(test_name, print_option):
 
-    # if there is no sample input, then parsers are used, sets everything for use with parsers
-    if rankings == None:
-        anno = GMT(args.annotation_list)
-        rankings = MAT(args.cluster_list)
-        cluster = args.cluster_number
-        permutations=args.permutations
-        use_parsers = True
-    else:
-        rankings = MAT(rankings)
-        anno = GMT(anno)
+    anno = GMT(args.annotation_list)
+    mat = MAT(args.cluster_list)
+    cluster = args.cluster_number
+    permutations=args.permutations
 
     if test_name == "wilcoxon":
-        gene_rankings = wilcoxon(rankings, anno, cluster)
+        rankings = wilcoxon(mat, anno, cluster,args.rate)
     elif test_name == "page":
-        gene_rankings = page(rankings, anno, cluster)
+        rankings = page(mat, anno, cluster,args.rate)
     elif test_name == "gsea":
-        gene_rankings = gsea(rankings, anno, cluster, permutations)
+        rankings = gsea(mat, anno, cluster, permutations,args.rate)
 
     # prints out the rankings and significant values
-    if use_parsers:
-        if test_name == "gsea":
-            return OUT(gene_rankings, args.output, args.rate, rankings, anno).printout_GSEA(print_option)
-        else:
-            return OUT(gene_rankings, args.output, args.rate, rankings, anno).printout_E(print_option)
 
+    if test_name == "gsea":
+        return OUT(rankings[0],rankings[1], args.output,  mat, anno).printout_GSEA(print_option,False)
     else:
-        if test_name == "gsea":
-            return OUT(gene_rankings, output, rate, rankings, anno).printout_GSEA(print_option)
-        else:
-            return OUT(gene_rankings, args.output, args.rate, rankings, anno).printout_E(print_option)
+        return OUT(rankings[0],rankings[1], args.output, mat, anno).printout_E(print_option,False)
+
+# FDR correction for multiple hypothesis testing
+def benjamini_hochberg(gene_rankings):
+
+    output=[]
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line[2]))
+    prev_bh_value = 0
+    for i, row in enumerate(gene_rankings):
+
+        bh_value = row[2] * len(gene_rankings) / float(i + 1)
+        bh_value = min(bh_value, 1)
+        # to preserve monotonicity
+        if bh_value < prev_bh_value:
+            output[i - 1][3] = bh_value
+        temp_arr = []
+        for j, grc in enumerate(row):
+            temp_arr.append(grc)
+        temp_arr.append(bh_value)
+        output.append(temp_arr)
+        prev_bh_value=bh_value
+    return output
+
+#filters out significant items
+def significance_filter(gene_rankings,alpha):
+    significant_values = []
+    for i, row in enumerate(gene_rankings):
+        if row[3] < alpha:
+            significant_values.append(row)
+
+    return significant_values
 
 
 if __name__ == '__main__':
@@ -266,8 +281,6 @@ if __name__ == '__main__':
 
     usage = "usage: %prog [options]"
     parser = ArgumentParser(usage, version="%prog dev-unreleased")
-
-
 
     parser.add_argument(
         "-a",

@@ -51,8 +51,8 @@ def generate_inputs(anno, background):
 # completes the input array for each sepcific sample gene set and executes a multiprocess mapping inputs to all GO gene sets
 def multiprocess(gsid, sample, map_arr, method):
     map_arr_copy = list(map_arr)
-    for i in range(0, len(map_arr)):
-        map_arr_copy[i] = [map_arr_copy[i][0], map_arr_copy[i][1], map_arr_copy[i][2], gsid, sample.genesets[gsid]]
+    for i, row in enumerate(map_arr_copy):
+        map_arr_copy[i] = [row[0], row[1], row[2], gsid, sample.genesets[gsid]]
 
     p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
     results = p.map(method, map_arr_copy)
@@ -65,8 +65,9 @@ def multiprocess(gsid, sample, map_arr, method):
 # generate contingency table
 def gen_table(sample_set, anno_set, background):
 
-    if background==None:
+    if background is None:
         background=BACKGROUND(anno_set.intersection(sample_set))
+
     list_anno_overlaps = len(sample_set.intersection(anno_set))
     if list_anno_overlaps==0:
         return 0
@@ -82,8 +83,7 @@ def gen_table(sample_set, anno_set, background):
 
 
 # fisher exact test on 2x2 contigency tables
-def fisher_exact(sample, anno, background):
-    t1=time.time()
+def fisher_exact(sample, anno, alpha, background):
 
     gene_rankings = []
     # contruct and analyze contingency tables
@@ -91,10 +91,10 @@ def fisher_exact(sample, anno, background):
 
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, fisher_process)
-        for i in range(0, len(items)):
-            gene_rankings.append(items[i])
-    print time.time()-t1
-    return gene_rankings
+        for item in items:
+            gene_rankings.append(item)
+    final_rankings = benjamini_hochberg(gene_rankings)
+    return [final_rankings, significance_filter(final_rankings, alpha)]
 
 
 # fisher sub-method for multiprocessing
@@ -107,15 +107,16 @@ def fisher_process(m_arr):
 
 
 # hypergeometric test on 2x2 contigency tables
-def hypergeometric(sample, anno, background):
+def hypergeometric(sample, anno, alpha,background):
     gene_rankings = []
     map_arr = generate_inputs(anno, background)
 
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, hypergeometric_process)
-        for i in range(0, len(items)):
-            gene_rankings.append(items[i])
-    return gene_rankings
+        for item in items:
+            gene_rankings.append(item)
+    final_rankings = benjamini_hochberg(gene_rankings)
+    return [final_rankings, significance_filter(final_rankings, alpha)]
 
 # hypergeometric sub-method for multiprocessing, m_arr contains the parameters
 def hypergeometric_process(m_arr):
@@ -127,16 +128,16 @@ def hypergeometric_process(m_arr):
 
 
 # binomial test on 2x2 contingency tables
-def binomial(sample, anno, background):
+def binomial(sample, anno, alpha,background):
     gene_rankings = []
     map_arr = generate_inputs(anno, background)
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, binomial_process)
-        for i in range(0, len(items)):
-            gene_rankings.append(items[i])
-    return gene_rankings
-
+        for item in items:
+            gene_rankings.append(item)
+    final_rankings = benjamini_hochberg(gene_rankings)
+    return [final_rankings, significance_filter(final_rankings, alpha)]
 # binomial sub-method for multiprocessing
 def binomial_process(m_arr):
     table = gen_table(m_arr[4], m_arr[1], m_arr[2])
@@ -147,15 +148,17 @@ def binomial_process(m_arr):
 
 
 # chi squared test on 2x2 contigency tables
-def chi_squared(sample, anno, background):
+def chi_squared(sample, anno, alpha,background):
     gene_rankings = []
     map_arr = generate_inputs(anno, background)
     # contruct and analyze contingency tables
     for gsid in sample.genesets:
         items = multiprocess(gsid, sample, map_arr, chi_process)
-        for i in range(0, len(items)):
-            gene_rankings.append(items[i])
-    return gene_rankings
+        for item in items:
+            gene_rankings.append(item)
+
+    final_rankings=benjamini_hochberg(gene_rankings)
+    return [final_rankings, significance_filter(final_rankings,alpha)]
 
 # chi squared sub-method for multiprocessing
 def chi_process(m_arr):
@@ -166,37 +169,56 @@ def chi_process(m_arr):
     return [m_arr[3], m_arr[0], p_value, table[0][0]]
 
 # wrapper method for integrating parsers and all overrep tests
-def over_rep_test(test_name, print_option, sample=None, anno=None, background=None, rate=None, output=None):
-    use_parsers = False
+def over_rep_test(test_name, print_option,background=None):
 
-    # if there is no sample input, then parsers are used, sets everything for use with parsers
-    if sample == None:
-        sample = GMT(args.gene_list)
-        anno = GMT(args.annotation_list)
-        if args.background_list != None:
-            background = BACKGROUND([],args.background_list)
-        use_parsers = True
-    else:
-        sample = GMT(sample)
-        anno = GMT(anno)
-        if background != None:
-            background = BACKGROUND([],background)
+    sample = GMT(args.gene_list)
+    anno = GMT(args.annotation_list)
+    if args.background_list is not None:
+        background = BACKGROUND([],args.background_list)
 
     if test_name == "fisher_exact":
-        gene_rankings = fisher_exact(sample, anno, background)
+        rankings = fisher_exact(sample, anno, args.rate,background)
     elif test_name == "chi_squared":
-        gene_rankings = chi_squared(sample, anno, background)
+        rankings = chi_squared(sample, anno, args.rate, background)
     elif test_name == "binomial":
-        gene_rankings = binomial(sample, anno, background)
+        rankings = binomial(sample, anno,args.rate, background)
     elif test_name == "hypergeometric":
-        gene_rankings = hypergeometric(sample, anno, background)
+        rankings = hypergeometric(sample, anno, args.rate,background)
 
     # prints out the rankings and significant values
-    if use_parsers:
-        return OUT(gene_rankings, args.output, args.rate, sample, anno).printout(print_option)
-    else:
-        return OUT(gene_rankings, output, rate, sample, anno).printout(print_option)
 
+    return OUT(rankings[0],rankings[1], args.output, sample, anno).printout(print_option,False)
+
+# FDR correction for multiple hypothesis testing
+def benjamini_hochberg(gene_rankings):
+
+    output=[]
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line[2]))
+    prev_bh_value=0
+    for i, row in enumerate(gene_rankings):
+
+        bh_value = row[2] * len(gene_rankings) / float(i + 1)
+        bh_value = min(bh_value, 1)
+
+        #to preserve monotonicity
+        if bh_value<prev_bh_value:
+            output[i-1][4]=bh_value
+        temp_arr=[]
+        for j, grc in enumerate(row):
+            temp_arr.append(grc)
+        temp_arr.append(bh_value)
+        output.append(temp_arr)
+        prev_bh_value=bh_value
+    return output
+
+#filters out significant items
+def significance_filter(gene_rankings,alpha):
+    significant_values = []
+    for i, row in enumerate(gene_rankings):
+        if row[4] < alpha:
+            significant_values.append(row)
+
+    return significant_values
 
 if __name__ == '__main__':
 
