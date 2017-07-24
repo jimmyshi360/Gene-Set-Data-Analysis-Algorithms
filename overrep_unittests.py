@@ -29,17 +29,20 @@ class TestStattests(unittest.TestCase):
         self.assertEqual(generate_inputs(anno, background)[0][2], background)
 
     def test_benjamini_hochberg(self):
-        rankings=[[0,0,0.000162523456526,0],[0,0,0.0154958566105,0],[0,0,0.021212455155,0],[0,0,0.0385370130677,0],[0,0,0.118513682097,0],[0,0,0.138018032079,0],[0,0,0.297867156785,0]]
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[0][4], 0.001137664, delta=0.0001)
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[2][4], 0.04949573, delta=0.0001)
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[4][4], 0.1610210, delta=0.0001)
+        rankings=[EnrichmentResult(0,0,0,0,0.000162523456526,0,0),EnrichmentResult(0,0,0,0,0.0154958566105,0,0)
+            ,EnrichmentResult(0,0,0,0,0.021212455155,0,0),EnrichmentResult(0,0,0,0,0.0385370130677,0,0)
+            ,EnrichmentResult(0,0,0,0,0.118513682097,0,0),EnrichmentResult(0,0,0,0,0.138018032079,0,0)
+            ,EnrichmentResult(0,0,0,0,0.297867156785,0,0)]
+        self.assertAlmostEqual(benjamini_hochberg(rankings)[0].FDR, 0.001137664, delta=0.0001)
+        self.assertAlmostEqual(benjamini_hochberg(rankings)[2].FDR, 0.04949573, delta=0.0001)
+        self.assertAlmostEqual(benjamini_hochberg(rankings)[4].FDR, 0.1610210, delta=0.0001)
 
     def test_significance_filter(self):
-        rankings = [[0, 0, 0, 0, 0.006], [1, 0, 0, 0, 0.03], [2, 0, 0, 0, 0.2]]
+        rankings = [EnrichmentResult(0, 0, 0, 0, 0,0, 0.006), EnrichmentResult(1, 0, 0, 0,0,0,0.03), EnrichmentResult(2, 0, 0, 0,0,0, 0.2)]
         rankings=significance_filter(rankings,0.05)
         test_arr=[]
         for i, item in enumerate(rankings):
-            test_arr.append(item[0])
+            test_arr.append(item.gsid)
         self.assertTrue(0 in test_arr)
         self.assertTrue(1 in test_arr)
         self.assertTrue(2 not in test_arr)
@@ -50,14 +53,14 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files","test_gmt.gmt"))
         background = BACKGROUND([],os.path.join("unittest_files","test_background.txt"))
 
-        self.assertAlmostEqual(float(binomial(sample, anno, 1, background)[0][0][2]), 0.0229768421702,delta=0.0001)
+        self.assertAlmostEqual(float(binomial(sample, anno, 1, background)[0][0].p_value), 0.0229768421702,delta=0.0001)
 
     def test_fisher(self):
         anno = GMT(os.path.join("unittest_files","test_go.gmt"))
         sample =  GMT(os.path.join("unittest_files","test_gmt.gmt"))
         background =  BACKGROUND([],os.path.join("unittest_files","test_background.txt"))
 
-        self.assertAlmostEqual(float(fisher_exact(sample, anno, 1, background)[0][0][2]),0.0255246814673,delta=0.0001)
+        self.assertAlmostEqual(float(fisher_exact(sample, anno, 1, background)[0][0].p_value),0.0255246814673,delta=0.0001)
 
 
     def test_chi_squared(self):
@@ -65,7 +68,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files","test_gmt.gmt"))
         background =  BACKGROUND([],os.path.join("unittest_files","test_background.txt"))
 
-        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background)[0][0][2]), 1.27701446634e-64,delta=0.0001)
+        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background)[0][0].p_value), 1.27701446634e-64,delta=0.0001)
 
 
     def test_hypergeometric(self):
@@ -73,7 +76,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files","test_gmt.gmt"))
         background =  BACKGROUND([],os.path.join("unittest_files","test_background.txt"))
 
-        self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background)[0][0][2]), 0.0219349067622,delta=0.0001)
+        self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background)[0][0].p_value), 0.0219349067622,delta=0.0001)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestStattests)

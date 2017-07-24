@@ -35,6 +35,28 @@ must first call build_inputs() to generate data inputs
 call multiprocess() to generate output
 '''
 
+class EnrichmentResult:
+    def __init__(self, gsid, gs1_ngenes, go_id, gs2_ngenes,p_value, overlaps, FDR):
+        self.gsid=gsid
+        self.gs1_ngenes=gs1_ngenes
+        self.go_id = go_id
+        self.gs2_ngenes=gs2_ngenes
+        self.p_value = p_value
+        self.overlaps=overlaps
+        self.FDR=FDR
+
+    def set_FDR(self,new_FDR):
+        self.FDR=new_FDR
+
+class InputItem:
+    def __init__(self, go_id, gene_list, background,gsid, gene_set):
+        self.go_id = go_id
+        self.gene_list=gene_list
+        self.background=background
+        self.gsid=gsid
+        self.gene_set=gene_set
+
+
 p = None
 args=None
 
@@ -50,12 +72,16 @@ def generate_inputs(anno, background):
 
 # completes the input array for each sepcific sample gene set and executes a multiprocess mapping inputs to all GO gene sets
 def multiprocess(gsid, sample, map_arr, method):
-    map_arr_copy = list(map_arr)
-    for i, row in enumerate(map_arr_copy):
-        map_arr_copy[i] = [row[0], row[1], row[2], gsid, sample.genesets[gsid]]
+    input_arr=[]
+    for i, row in enumerate(map_arr):
+        go_id=row[0]
+        gene_list=row[1]
+        background=row[2]
+        next_item = InputItem(go_id, gene_list, background, gsid, sample.genesets[gsid])
+        input_arr.append(next_item)
 
     p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    results = p.map(method, map_arr_copy)
+    results = p.map(method, input_arr)
     p.close()
     p.join()
 
@@ -98,12 +124,17 @@ def fisher_exact(sample, anno, alpha, background):
 
 
 # fisher sub-method for multiprocessing
-def fisher_process(m_arr):
-    table = gen_table(m_arr[4], m_arr[1], m_arr[2])
+def fisher_process(input_item):
+
+    table = gen_table(input_item.gene_set,input_item.gene_list, input_item.background)
+
+    # in the case of no overlaps
     if table==0:
-        return [m_arr[3], m_arr[0], 1.0, 0]
+        return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list), 1.0, 0,0)
+    list_anno_overlaps = table[0][0]
     p_value = stats.fisher_exact(table)[1]
-    return [m_arr[3], m_arr[0], p_value, table[0][0]]
+
+    return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list), p_value, list_anno_overlaps,0)
 
 
 # hypergeometric test on 2x2 contigency tables
@@ -119,12 +150,17 @@ def hypergeometric(sample, anno, alpha,background):
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 # hypergeometric sub-method for multiprocessing, m_arr contains the parameters
-def hypergeometric_process(m_arr):
-    table = gen_table(m_arr[4], m_arr[1], m_arr[2])
-    if table==0:
-        return [m_arr[3], m_arr[0], 1.0, 0]
+def hypergeometric_process(input_item):
+    table = gen_table(input_item.gene_set, input_item.gene_list, input_item.background)
+
+    # in the case of no overlaps
+    if table == 0:
+        return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list),
+                                1.0, 0, 0)
+    list_anno_overlaps = table[0][0]
     p_value = stats.hypergeom.sf(table[0][0] - 1, table[0][1] + table[1][1], table[0][1], table[0][0] + table[1][0])
-    return [m_arr[3], m_arr[0], p_value, table[0][0]]
+
+    return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list), p_value, list_anno_overlaps,0)
 
 
 # binomial test on 2x2 contingency tables
@@ -138,13 +174,21 @@ def binomial(sample, anno, alpha,background):
             gene_rankings.append(item)
     final_rankings = benjamini_hochberg(gene_rankings)
     return [final_rankings, significance_filter(final_rankings, alpha)]
+
+
 # binomial sub-method for multiprocessing
-def binomial_process(m_arr):
-    table = gen_table(m_arr[4], m_arr[1], m_arr[2])
-    if table==0:
-        return [m_arr[3], m_arr[0], 1.0, 0]
-    p_value = stats.binom_test(table[0][0], len(m_arr[4]), float(table[0][1]) / (table[1][1] + table[0][1]))
-    return [m_arr[3], m_arr[0], p_value, table[0][0]]
+def binomial_process(input_item):
+    table = gen_table(input_item.gene_set, input_item.gene_list, input_item.background)
+    list_anno_overlaps = table[0][0]
+
+    # in the case of no overlaps
+    if table == 0:
+        return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list),
+                                1.0, 0, 0)
+    list_anno_overlaps = table[0][0]
+    p_value = stats.binom_test(list_anno_overlaps, len(input_item.gene_set), float(table[0][1]) / (table[1][1] + table[0][1]))
+
+    return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list),p_value, list_anno_overlaps,0)
 
 
 # chi squared test on 2x2 contigency tables
@@ -161,12 +205,17 @@ def chi_squared(sample, anno, alpha,background):
     return [final_rankings, significance_filter(final_rankings,alpha)]
 
 # chi squared sub-method for multiprocessing
-def chi_process(m_arr):
-    table = gen_table(m_arr[4], m_arr[1], m_arr[2])
-    if table==0:
-        return [m_arr[3], m_arr[0], 1.0, 0]
+def chi_process(input_item):
+    table = gen_table(input_item.gene_set, input_item.gene_list, input_item.background)
+
+
+    # in the case of no overlaps
+    if  table == 0:
+        return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list),
+                                1.0, 0, 0)
+    list_anno_overlaps = table[0][0]
     p_value = stats.chisquare(table)[1][0]
-    return [m_arr[3], m_arr[0], p_value, table[0][0]]
+    return EnrichmentResult(input_item.gsid, len(input_item.gene_set), input_item.go_id, len(input_item.gene_list),p_value, list_anno_overlaps,0)
 
 # wrapper method for integrating parsers and all overrep tests
 def over_rep_test(test_name, print_option,background=None):
@@ -187,36 +236,36 @@ def over_rep_test(test_name, print_option,background=None):
 
     # prints out the rankings and significant values
 
-    return OUT(rankings[0],rankings[1], args.output, sample, anno).printout(print_option,False)
+    return OUT(rankings[0],rankings[1], args.output).printout(print_option,False)
 
 # FDR correction for multiple hypothesis testing
 def benjamini_hochberg(gene_rankings):
 
     output=[]
-    gene_rankings = sorted(gene_rankings, key=lambda line: float(line[2]))
-    prev_bh_value=0
-    for i, row in enumerate(gene_rankings):
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
 
-        bh_value = row[2] * len(gene_rankings) / float(i + 1)
+    prev_bh_value=0
+    for i, E_Result in enumerate(gene_rankings):
+
+        bh_value = E_Result.p_value * len(gene_rankings) / float(i + 1)
         bh_value = min(bh_value, 1)
 
         #to preserve monotonicity
         if bh_value<prev_bh_value:
-            output[i-1][4]=bh_value
-        temp_arr=[]
-        for j, grc in enumerate(row):
-            temp_arr.append(grc)
-        temp_arr.append(bh_value)
-        output.append(temp_arr)
+            output[i-1].set_FDR(bh_value)
+
+        E_Result.set_FDR(bh_value)
+        output.append(E_Result)
         prev_bh_value=bh_value
+
     return output
 
 #filters out significant items
 def significance_filter(gene_rankings,alpha):
     significant_values = []
-    for i, row in enumerate(gene_rankings):
-        if row[4] < alpha:
-            significant_values.append(row)
+    for i, E_Result in enumerate(gene_rankings):
+        if E_Result.FDR < alpha:
+            significant_values.append(E_Result)
 
     return significant_values
 

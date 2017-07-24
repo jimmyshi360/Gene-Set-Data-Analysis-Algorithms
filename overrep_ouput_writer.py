@@ -1,19 +1,19 @@
 
+
+
 # class for generating overrep test outputs
 class OUT:
-    def __init__(self, gene_rankings, significant_rankings, output, sample, anno):
+    def __init__(self, gene_rankings, significant_rankings, output):
         self._gene_rankings=gene_rankings
         self._output=open(output,"r+")
-        self._sample=sample
-        self._anno=anno
         self._significant_rankings=significant_rankings
 
     # printing function
     # significant parameter is a boolean specifying if only significant results are desired according to the alpha level
-    def printout(self, print_option, significant):
+    def printout(self, print_to_console, significant):
 
         # print all significant gene sets
-        if print_option:
+        if print_to_console:
             print("\nSIGNIFICANT VALUES")
             print("\ngs1\tgs1.ngenes\tgs2\tgs2.ngenes\tncommon\tpvalue\tFDR")
         self._output.write("\ngs1\tgs1.ngenes\tgs2\tgs2.ngenes\tncommon\tpvalue\tFDR\n")
@@ -23,16 +23,19 @@ class OUT:
         else:
             rankings=self._gene_rankings
 
-        for i, row in enumerate(rankings):
-            gsid=str(row[0])
-            gs1_ngenes=str(len(self._sample.genesets[row[0]]))
-            go_id=str(row[1])
-            gs2_ngenes=str(len(self._anno.genesets[row[1]]))
-            p_value=str(row[2])
-            ncommon=str(row[3])
-            FDR=str(row[4])
-            self._output.write(gsid + "\t" + gs1_ngenes+"\t"+go_id+"\t"+gs2_ngenes+"\t"+ncommon+"\t"+p_value+"\t"+FDR+"\n")
+        for E_Result in rankings:
+            output_arr=[]
+            output_arr.append(E_Result.gsid)
+            output_arr.append(E_Result.gs1_ngenes)
+            output_arr.append(E_Result.go_id)
+            output_arr.append(E_Result.gs2_ngenes)
+            output_arr.append(E_Result.overlaps)
+            output_arr.append(E_Result.p_value)
+            output_arr.append(E_Result.FDR)
+            output_arr=map(str,output_arr)
 
-            if print_option:
-                print(gsid + "\t" + gs1_ngenes+"\t"+go_id+"\t"+gs2_ngenes+"\t"+ncommon+"\t"+p_value+"\t"+FDR)
+            self._output.write('\t'.join(output_arr)+"\n")
+
+            if print_to_console:
+                print('\t'.join(output_arr))
 

@@ -13,15 +13,40 @@ from collections import defaultdict
 
 args=None
 score_arr=[]
+
+class EnrichmentResult:
+    def __init__(self, cluster, cluster_ngenes, go_id, gs2_ngenes, p_value, FDR,es=None, nes=None):
+        self.cluster=cluster
+        self.cluster_ngenes=cluster_ngenes
+        self.go_id = go_id
+        self.gs2_ngenes=gs2_ngenes
+        self.p_value = p_value
+        self.FDR=FDR
+        self.es=es
+        self.nes=nes
+
+    def set_FDR(self,new_FDR):
+        self.FDR=new_FDR
+
+class InputItem:
+    def __init__(self, go_id, gene_list, cluster,rankings, permutations=None, gene_mean=None, gene_sd=None):
+        self.go_id = go_id
+        self.gene_list=gene_list
+        self.cluster=cluster
+        self.rankings=rankings
+        self.permutations= permutations
+        self.gene_mean=gene_mean
+        self.gene_sd=gene_sd
+
 # builds general multiprocessing inputs for all statistical methods
 def generate_inputs(anno, cluster, rankings, permutations=None):
 
     input_arr = []
     for go_id in anno.genesets:
         if permutations!=None:
-            input_arr.append([go_id, anno.genesets[go_id], cluster, rankings,permutations])
+            input_arr.append(InputItem(go_id, anno.genesets[go_id], cluster, rankings,permutations))
         else:
-            input_arr.append([go_id, anno.genesets[go_id], cluster, rankings])
+            input_arr.append(InputItem(go_id, anno.genesets[go_id], cluster, rankings))
     return input_arr
 
 
@@ -33,19 +58,28 @@ def multiprocess(map_arr, method):
     p.join()
     return results
 
+# gsea main method to call
+def gsea(rankings, anno, cluster,permutations, alpha):
+
+    rankings.sort(cluster)
+    gene_rankings = []
+    input_arr = generate_inputs(anno, cluster, rankings, permutations)
+    gene_rankings = multiprocess(input_arr, gsea_process)
+
+    # prints out the rankings and significant values
+    return [gene_rankings,significance_filter(gene_rankings,alpha)]
 
 # GSEA multiprocessing function
-def gsea_process(m_arr):
+def gsea_process(input_item):
     #t1 = time.time()
-    es = enrichment_score(m_arr[1], m_arr[2], m_arr[3], 1)
-    es_arr = es_distr(m_arr[3], m_arr[2], m_arr[1],m_arr[4])
+    es = enrichment_score(input_item.gene_list, input_item.cluster, input_item.rankings, 1)
+    es_arr = es_distr(input_item.rankings, input_item.cluster, input_item.gene_list, input_item.permutations)
     nes = normalize_score(es, es_arr)
     nes_arr = normalize_array(es_arr)
     n_p = n_p_value(es, es_arr)
     FDR = n_p_value(nes, nes_arr)
     #print time.time()-t1
-    return [m_arr[2], m_arr[0], n_p, FDR, es, nes]
-
+    return EnrichmentResult(input_item.cluster, len(input_item.rankings.dict), input_item.go_id, len(input_item.gene_list), n_p, FDR, es, nes)
 
 # calculates enrichment score based of the max ES of a linear traversal
 def enrichment_score(anno, cluster, rankings, weight):
@@ -92,21 +126,6 @@ def es_distr(rankings, cluster, anno,permutations):
         permuted_arr = np.random.permutation(list(rankings_map))[0:len(anno)]
         es_arr.append(enrichment_score(permuted_arr, cluster, rankings, 1))
     return es_arr
-
-
-# gsea main method to call
-def gsea(rankings, anno, cluster,permutations, alpha):
-
-    rankings.sort(cluster)
-    gene_rankings = []
-    input_arr = generate_inputs(anno, cluster, rankings, permutations)
-    items = multiprocess(input_arr, gsea_process)
-
-    for i in items:
-        gene_rankings.append([i[0], i[1], i[2], i[3], i[4],i[5]])
-    # prints out the rankings and significant values
-    return [gene_rankings,significance_filter(gene_rankings,alpha)]
-
 
 def normalize_score(es, es_arr):
     total = 0
@@ -163,24 +182,24 @@ def wilcoxon(rankings, anno, cluster,alpha):
     rankings_final=benjamini_hochberg(gene_rankings)
     return [rankings_final,significance_filter(rankings_final, alpha)]
 
-def wilcoxon_process(m_arr):
+def wilcoxon_process(input_item):
 
-    for gene in m_arr[1]:
+    for gene in input_item.gene_list:
         row_arr = []
-        if gene in m_arr[3].dict:
-            row_arr = list(m_arr[3].dict[gene])
+        if gene in input_item.rankings.dict:
+            row_arr = list(input_item.rankings.dict[gene])
         if len(row_arr) != 0:
-            score_arr.append(float(row_arr[m_arr[2]]))
+            score_arr.append(float(row_arr[input_item.cluster]))
         else:
             break
     total_score_list = []
-    for gene in m_arr[3].dict:
-        row_arr = list(m_arr[3].dict[gene])
-        if len(row_arr) != 0 and row_arr[m_arr[2]]:
-            total_score_list.append(row_arr[m_arr[2]])
+    for gene in input_item.rankings.dict:
+        row_arr = list(input_item.rankings.dict[gene])
+        if len(row_arr) != 0 and row_arr[input_item.cluster]:
+            total_score_list.append(row_arr[input_item.cluster])
     p_value = stats.ranksums(score_arr, total_score_list)[1]
 
-    return [m_arr[2], m_arr[0], p_value]
+    return EnrichmentResult(input_item.cluster, len(input_item.rankings.dict), input_item.go_id, len(input_item.gene_list), p_value,0)
 
 # parametric analysis gene enrichment test, compares an input list of genesets versus scores between two experimental groups
 def page(rankings, anno, cluster, alpha):
@@ -195,9 +214,10 @@ def page(rankings, anno, cluster, alpha):
     input_arr = generate_inputs(anno, cluster, rankings)
     input_arr_copy = list(input_arr)
 
-    for i, row in enumerate(input_arr_copy):
-        input_arr_copy[i] = [row[0], row[1], row[2], row[3],
-                             gene_mean, gene_sd]
+    for i, input_item in enumerate(input_arr_copy):
+
+        #the 0 is included in the input array because of the permutations variable preceding gene_sd and gene_mean in the constructor
+        input_arr_copy[i] = InputItem(input_item.go_id, input_item.gene_list, input_item.cluster, input_item.rankings, 0, gene_mean, gene_sd)
 
     gene_rankings = multiprocess(input_arr_copy, page_process)
 
@@ -205,23 +225,26 @@ def page(rankings, anno, cluster, alpha):
     return [rankings_final,significance_filter(rankings_final, alpha)]
 
 # page multiprocess method
-def page_process(m_arr):
+def page_process(input_item):
 
-    geneset_size = len(m_arr[1])
+    geneset_size = len(input_item.gene_list)
     score_arr = []
     # for each gene set, calculate values
 
-    for id in m_arr[3].dict:
-        row = list(m_arr[3].dict[id])
-        if id in m_arr[1]:
-            score_arr.append(row[m_arr[2]])
+    for id in input_item.rankings.dict:
+        row = list(input_item.rankings.dict[id])
+        if id in input_item.gene_list:
+            score_arr.append(row[input_item.cluster])
 
     score_arr = np.array(score_arr).astype(np.float)
+
     geneset_mean = np.mean(score_arr)
-    z_score = (m_arr[4] - geneset_mean) * math.sqrt(geneset_size) / m_arr[5]
+
+    z_score = (input_item.gene_mean - geneset_mean) * math.sqrt(geneset_size) / input_item.gene_sd
 
     p_value = stats.norm.sf(abs(z_score))
-    return [m_arr[2], m_arr[0], p_value]
+    return EnrichmentResult(input_item.cluster, len(input_item.rankings.dict), input_item.go_id, len(input_item.gene_list),
+                            p_value, 0)
 
 # wrapper function to call enrichment tests
 def enrichment_test(test_name, print_option):
@@ -241,37 +264,34 @@ def enrichment_test(test_name, print_option):
     # prints out the rankings and significant values
 
     if test_name == "gsea":
-        return OUT(rankings[0],rankings[1], args.output,  mat, anno).printout_GSEA(print_option,False)
+        return OUT(rankings[0],rankings[1], args.output).printout_GSEA(print_option,False)
     else:
-        return OUT(rankings[0],rankings[1], args.output, mat, anno).printout_E(print_option,False)
+        return OUT(rankings[0],rankings[1], args.output).printout_E(print_option,False)
 
 # FDR correction for multiple hypothesis testing
 def benjamini_hochberg(gene_rankings):
 
     output=[]
-    gene_rankings = sorted(gene_rankings, key=lambda line: float(line[2]))
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
     prev_bh_value = 0
-    for i, row in enumerate(gene_rankings):
+    for i, E_Result in enumerate(gene_rankings):
 
-        bh_value = row[2] * len(gene_rankings) / float(i + 1)
+        bh_value = E_Result.p_value * len(gene_rankings) / float(i + 1)
         bh_value = min(bh_value, 1)
         # to preserve monotonicity
         if bh_value < prev_bh_value:
-            output[i - 1][3] = bh_value
-        temp_arr = []
-        for j, grc in enumerate(row):
-            temp_arr.append(grc)
-        temp_arr.append(bh_value)
-        output.append(temp_arr)
+            output[i - 1].set_FDR (bh_value)
+        E_Result.set_FDR(bh_value)
+        output.append(E_Result)
         prev_bh_value=bh_value
     return output
 
 #filters out significant items
 def significance_filter(gene_rankings,alpha):
     significant_values = []
-    for i, row in enumerate(gene_rankings):
-        if row[3] < alpha:
-            significant_values.append(row)
+    for i, E_Result in enumerate(gene_rankings):
+        if E_Result.FDR < alpha:
+            significant_values.append(E_Result)
 
     return significant_values
 
