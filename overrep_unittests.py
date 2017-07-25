@@ -29,16 +29,16 @@ class TestStattests(unittest.TestCase):
         self.assertEqual(generate_inputs(anno, background)[0][2], background)
 
     def test_benjamini_hochberg(self):
-        rankings=[EnrichmentResult(0,0,0,0,0.000162523456526,0,0),EnrichmentResult(0,0,0,0,0.0154958566105,0,0)
-            ,EnrichmentResult(0,0,0,0,0.021212455155,0,0),EnrichmentResult(0,0,0,0,0.0385370130677,0,0)
-            ,EnrichmentResult(0,0,0,0,0.118513682097,0,0),EnrichmentResult(0,0,0,0,0.138018032079,0,0)
-            ,EnrichmentResult(0,0,0,0,0.297867156785,0,0)]
+        rankings=[OverrepResult(0, 0, 0, 0, 0.000162523456526, 0, 0), OverrepResult(0, 0, 0, 0, 0.0154958566105, 0, 0)
+            , OverrepResult(0, 0, 0, 0, 0.021212455155, 0, 0), OverrepResult(0, 0, 0, 0, 0.0385370130677, 0, 0)
+            , OverrepResult(0, 0, 0, 0, 0.118513682097, 0, 0), OverrepResult(0, 0, 0, 0, 0.138018032079, 0, 0)
+            , OverrepResult(0, 0, 0, 0, 0.297867156785, 0, 0)]
         self.assertAlmostEqual(benjamini_hochberg(rankings)[0].FDR, 0.001137664, delta=0.0001)
         self.assertAlmostEqual(benjamini_hochberg(rankings)[2].FDR, 0.04949573, delta=0.0001)
         self.assertAlmostEqual(benjamini_hochberg(rankings)[4].FDR, 0.1610210, delta=0.0001)
 
     def test_significance_filter(self):
-        rankings = [EnrichmentResult(0, 0, 0, 0, 0,0, 0.006), EnrichmentResult(1, 0, 0, 0,0,0,0.03), EnrichmentResult(2, 0, 0, 0,0,0, 0.2)]
+        rankings = [OverrepResult(0, 0, 0, 0, 0, 0, 0.006), OverrepResult(1, 0, 0, 0, 0, 0, 0.03), OverrepResult(2, 0, 0, 0, 0, 0, 0.2)]
         rankings=significance_filter(rankings,0.05)
         test_arr=[]
         for i, item in enumerate(rankings):

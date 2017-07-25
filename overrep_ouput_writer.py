@@ -10,15 +10,15 @@ class OUT:
 
     # printing function
     # significant parameter is a boolean specifying if only significant results are desired according to the alpha level
-    def printout(self, print_to_console, significant):
+    def printout(self, print_to_console, significant_only):
 
         # print all significant gene sets
         if print_to_console:
             print("\nSIGNIFICANT VALUES")
-            print("\ngs1\tgs1.ngenes\tgs2\tgs2.ngenes\tncommon\tpvalue\tFDR")
-        self._output.write("\ngs1\tgs1.ngenes\tgs2\tgs2.ngenes\tncommon\tpvalue\tFDR\n")
+            print("\ngs1\tgs1.ngenes\tannotation_id\tannotation.ngenes\tncommon\tp_value\tFDR")
+        self._output.write("\ngs1\tgs1.ngenes\tannotation_id\tannotation.ngenes\tncommon\tp_value\tFDR\n")
 
-        if significant:
+        if significant_only:
             rankings=self._significant_rankings
         else:
             rankings=self._gene_rankings
@@ -26,9 +26,9 @@ class OUT:
         for E_Result in rankings:
             output_arr=[]
             output_arr.append(E_Result.gsid)
-            output_arr.append(E_Result.gs1_ngenes)
-            output_arr.append(E_Result.go_id)
-            output_arr.append(E_Result.gs2_ngenes)
+            output_arr.append(E_Result.sample_set_ngenes)
+            output_arr.append(E_Result.anno_id)
+            output_arr.append(E_Result.anno_ngenes)
             output_arr.append(E_Result.overlaps)
             output_arr.append(E_Result.p_value)
             output_arr.append(E_Result.FDR)
