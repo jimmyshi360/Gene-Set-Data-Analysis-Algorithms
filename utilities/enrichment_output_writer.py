@@ -3,7 +3,7 @@ class OUT:
     def __init__(self, all_rankings, significant_rankings, output):
         self._all_rankings = all_rankings
         self._output = open(output, "r+")
-        self._significant_rankings=significant_rankings
+        self._significant_rankings = significant_rankings
 
     # printing function for gsea
     # significant parameter is a boolean specifying if only significant results are desired according to the alpha level
@@ -13,15 +13,15 @@ class OUT:
 
         if print_to_console:
             print("\nSIGNIFICANT VALUES")
-            print("\nexpression_list.cluster\texpression_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
-        self._output.write("\nexpression_list.cluster\texpression_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
+            print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
+        self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
 
         if significant_only:
-            rankings=self._significant_rankings
+            rankings = self._significant_rankings
         else:
-            rankings =self._all_rankings
+            rankings = self._all_rankings
 
-        for i,E_Result in enumerate(rankings):
+        for i, E_Result in enumerate(rankings):
             output_arr = []
             output_arr.append(E_Result.expr_cluster)
             output_arr.append(E_Result.expr_list_ngenes)
@@ -38,22 +38,22 @@ class OUT:
             if print_to_console:
                 print('\t'.join(output_arr))
 
-    #printing function for non-gsea tests
-    #significant parameter is a boolean specifying if only significant results are desired according to the alpha level
+    # printing function for non-gsea tests
+    # significant parameter is a boolean specifying if only significant results are desired according to the alpha level
     def printout_E(self, print_to_console, significant_only):
 
         # print all significant gene sets
         if print_to_console:
             print("\nSIGNIFICANT VALUES")
-            print("\nexpression_list.cluster\texpression_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
-        self._output.write("\nexpression_list.cluster\texpression_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
+            print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
+        self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
 
         if significant_only:
-            rankings=self._significant_rankings
+            rankings = self._significant_rankings
         else:
-            rankings =self._all_rankings
+            rankings = self._all_rankings
 
-        for i,E_Result in enumerate(rankings):
+        for i, E_Result in enumerate(rankings):
             output_arr = []
             output_arr.append(E_Result.expr_cluster)
             output_arr.append(E_Result.expr_list_ngenes)
@@ -67,6 +67,3 @@ class OUT:
 
             if print_to_console:
                 print('\t'.join(output_arr))
-
-
-

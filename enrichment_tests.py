@@ -1,16 +1,42 @@
 import math
 import multiprocessing
 import sys
-
 import numpy as np
-from flib.core.gmt import GMT
-from scipy import stats
 
-from enrichment_output_writer import OUT
-from utilities.mat import MAT
+from scipy import stats
 from collections import defaultdict
+from flib.core.gmt import GMT
+from utilities.enrichment_output_writer import OUT
+from utilities.mat import MAT
 
 score_arr = []
+
+
+# general class for setting up and running an enrichment test
+class EnrichmentTest:
+    def __init__(self):
+        self.anno_list = GMT(args.annotation_list)
+        self.expr_list = MAT(args.expr_list)
+        self.expr_cluster = args.cluster_number
+        self.permutations = args.permutations
+        self.alpha = args.rate
+        self.output = args.ouptut
+
+    def run(self, test_name, print_to_console, significant_only):
+        rankings = self.switch(test_name)
+
+        # passes output to the printer class
+        if test_name == "gsea":
+            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(print_to_console, False)
+        return OUT(rankings[0], rankings[1], self.output).printout_E(print_to_console, False)
+
+    def switch(self, test_name):
+        return {
+            "wilcoxon": wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha),
+            "page": page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha),
+            "gsea": gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha)
+
+        }.get(test_name, None)
 
 
 # each stat test will return an array of EnrichmentResults
@@ -25,7 +51,9 @@ class EnrichmentResult:
         self.es = es
         self.nes = nes
 
-# each stat test will require an array of InputItems
+
+# each enrichment test will require an array of InputItems
+# multiprocessing will map each item in the array to a worker
 class InputItem:
     def __init__(self, anno_id, anno_list, expr_cluster, expr_list, permutations=None, gene_mean=None, gene_sd=None):
         self.anno_id = anno_id
@@ -37,7 +65,7 @@ class InputItem:
         self.gene_sd = gene_sd
 
 
-# builds general multiprocessing inputs for all statistical methods
+# generates a list of input items to be mapped to several processors
 def generate_inputs(anno, expr_cluster, expr_list, permutations=None):
     input_items = []
     for anno_id in anno.genesets:
@@ -48,7 +76,7 @@ def generate_inputs(anno, expr_cluster, expr_list, permutations=None):
     return input_items
 
 
-# starts multiprocessing the specified method
+# executes a multiprocess which divides the work for each annotation set among processors
 def multiprocess(map_arr, method):
     p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
     results = p.map(method, map_arr)
@@ -58,13 +86,13 @@ def multiprocess(map_arr, method):
 
 
 # gsea main method to call
-def gsea(expr_list, expr_cluster, anno_list,  permutations, alpha):
+def gsea(expr_list, expr_cluster, anno_list, permutations, alpha):
     expr_list.sort(expr_cluster)
-    gene_rankings = []
+    # build multiprocessing inputs
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations)
+
     gene_rankings = multiprocess(input_arr, gsea_process)
 
-    # prints out the rankings and significant values
     return [gene_rankings, significance_filter(gene_rankings, alpha)]
 
 
@@ -76,10 +104,12 @@ def gsea_process(input_item):
     nes_arr = normalize_array(es_arr)
     n_p = n_p_value(es, es_arr)
     FDR = n_p_value(nes, nes_arr)
-    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,len(input_item.anno_list), n_p, FDR, es, nes)
+
+    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
+                            len(input_item.anno_list), n_p, FDR, es, nes)
 
 
-# calculates enrichment score based of the max ES of a linear traversal
+# calculates enrichment score based of the max ES of a linear traversal path
 def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     anno_map = defaultdict()
     for i in anno_set:
@@ -122,7 +152,8 @@ def es_distr(expr_list, expr_cluster, anno_list, permutations):
         es_arr.append(enrichment_score(permuted_arr, expr_cluster, expr_list, 1))
     return es_arr
 
-#normalizes the enrichment score to account for different gene set sizes
+
+# normalizes the enrichment score to account for different gene set sizes
 def normalize_score(es, es_arr):
     total = 0
     count = 0
@@ -132,7 +163,8 @@ def normalize_score(es, es_arr):
             count += 1
     return es / (total / count)
 
-#normalizes the array to account for different gene set sizes
+
+# normalizes the array to account for different gene set sizes
 def normalize_array(es_arr):
     null_distr = []
     total = 0
@@ -144,6 +176,7 @@ def normalize_array(es_arr):
                 count += 1
         null_distr.append(es / (total / count))
     return null_distr
+
 
 # obtain nominal p value from the enrichment score distribution
 def n_p_value(es, es_arr):
@@ -166,16 +199,16 @@ def n_p_value(es, es_arr):
         return float(len(tail)) / float(len(es_arr))
 
 
-# wilcoxon rank sum test, compares an input list of genesets versus scores between two experimental groups
 def wilcoxon(expr_list, expr_cluster, anno_list, alpha):
     global score_arr
     score_arr = []
-
+    # build multiprocessing inputs
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list)
     gene_rankings = multiprocess(input_arr, wilcoxon_process)
 
     rankings_final = benjamini_hochberg(gene_rankings)
     return [rankings_final, significance_filter(rankings_final, alpha)]
+
 
 # wilcoxon multiprocess method
 def wilcoxon_process(input_item):
@@ -194,7 +227,8 @@ def wilcoxon_process(input_item):
             total_score_list.append(row_arr[input_item.expr_cluster])
     p_value = stats.ranksums(score_arr, total_score_list)[1]
 
-    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id, len(input_item.anno_list), p_value, 0)
+    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
+                            len(input_item.anno_list), p_value, 0)
 
 
 # parametric analysis gene enrichment test
@@ -203,16 +237,18 @@ def page(expr_list, expr_cluster, anno_list, alpha):
 
     # calculate value related to the entire cluster
     for i in expr_list.dict:
-        score_arr.append(list(expr_list.dict[i])[ expr_cluster])
+        score_arr.append(list(expr_list.dict[i])[expr_cluster])
     score_arr = np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
     gene_sd = np.std(score_arr)
-    input_arr = generate_inputs(anno_list,  expr_cluster, expr_list)
+    input_arr = generate_inputs(anno_list, expr_cluster, expr_list)
     input_arr_copy = list(input_arr)
 
     for i, input_item in enumerate(input_arr_copy):
         # the 0 is included in the input array because of the permutations variable preceding gene_sd and gene_mean in the constructor
-        input_arr_copy[i] = InputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster, input_item.expr_list,
+
+        input_arr_copy[i] = InputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster,
+                                      input_item.expr_list,
                                       0, gene_mean, gene_sd)
 
     gene_rankings = multiprocess(input_arr_copy, page_process)
@@ -237,40 +273,22 @@ def page_process(input_item):
     z_score = (input_item.gene_mean - geneset_mean) * math.sqrt(geneset_size) / input_item.gene_sd
 
     p_value = stats.norm.sf(abs(z_score))
-    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,len(input_item.anno_list), p_value, 0)
-
-
-# wrapper function to call enrichment tests
-def enrichment_test(test_name, print_to_console):
-    anno_list = GMT(args.annotation_list)
-    expr_list = MAT(args.expr_list)
-    expr_cluster = args.cluster_number
-    permutations = args.permutations
-
-    if test_name == "wilcoxon":
-        rankings = wilcoxon(expr_list,  expr_cluster, anno_list, args.rate)
-    elif test_name == "page":
-        rankings = page(expr_list,  expr_cluster, anno_list,args.rate)
-    elif test_name == "gsea":
-        rankings = gsea(expr_list,  expr_cluster, anno_list,  permutations, args.rate)
-
-    # prints out the rankings and significant values
-
-    if test_name == "gsea":
-        return OUT(rankings[0], rankings[1], args.output).printout_GSEA(print_to_console, False)
-    return OUT(rankings[0], rankings[1], args.output).printout_E(print_to_console, False)
+    return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
+                            len(input_item.anno_list), p_value, 0)
 
 
 # FDR correction for multiple hypothesis testing
 def benjamini_hochberg(gene_rankings):
     output = []
+    # sort rankings before applyign BH correction
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
     prev_bh_value = 0
     for i, E_Result in enumerate(gene_rankings):
 
+        # standard BH correction based on ranking
         bh_value = E_Result.p_value * len(gene_rankings) / float(i + 1)
         bh_value = min(bh_value, 1)
-        # to preserve monotonicity, ensures that comparatively less significant items do not have a more comparatively significant FDR
+        # ensures that less significant items do not have a higher FDR than more significant items
         if bh_value < prev_bh_value:
             output[i - 1].FDR = bh_value
         E_Result.FDR = bh_value
@@ -283,7 +301,7 @@ def benjamini_hochberg(gene_rankings):
 def significance_filter(gene_rankings, alpha):
     significant_values = []
     for i, E_Result in enumerate(gene_rankings):
-        if E_Result.FDR < alpha:
+        if E_Result.FDR <= alpha:
             significant_values.append(E_Result)
 
     return significant_values
@@ -348,5 +366,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # perform a gsea test with a console printout
-    enrichment_test("gsea", True)
+    # perform a gsea test with a console printout and and including all values
+    test = EnrichmentTest()
+    test.run("gsea", True, False)
