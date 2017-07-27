@@ -2,6 +2,7 @@ import math
 import multiprocessing
 import sys
 import numpy as np
+import time
 
 from scipy import stats
 from collections import defaultdict
@@ -20,24 +21,24 @@ class EnrichmentTest:
         self.expr_cluster = args.cluster_number
         self.permutations = args.permutations
         self.alpha = args.rate
-        self.output = args.ouptut
+        self.output = args.output
 
     def run(self, test_name, print_to_console, significant_only):
+        t1=time.time()
         rankings = self.switch(test_name)
-
         # passes output to the printer class
+        print time.time()-t1
         if test_name == "gsea":
             return OUT(rankings[0], rankings[1], self.output).printout_GSEA(print_to_console, False)
         return OUT(rankings[0], rankings[1], self.output).printout_E(print_to_console, False)
 
     def switch(self, test_name):
-        return {
-            "wilcoxon": wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha),
-            "page": page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha),
-            "gsea": gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha)
+        if test_name=="wilcoxon":
+            return wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
+        elif test_name == "page":
+            return page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
 
-        }.get(test_name, None)
-
+        return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha)
 
 # each stat test will return an array of EnrichmentResults
 class EnrichmentResult:
@@ -92,7 +93,7 @@ def gsea(expr_list, expr_cluster, anno_list, permutations, alpha):
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations)
 
     gene_rankings = multiprocess(input_arr, gsea_process)
-
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
     return [gene_rankings, significance_filter(gene_rankings, alpha)]
 
 
@@ -111,9 +112,8 @@ def gsea_process(input_item):
 
 # calculates enrichment score based of the max ES of a linear traversal path
 def enrichment_score(anno_set, expr_cluster, expr_list, weight):
-    anno_map = defaultdict()
-    for i in anno_set:
-        anno_map[i] = 0
+    anno_map = dict.fromkeys(anno_set, 0)
+    anno_map = defaultdict(int, anno_map)
     rankings_map = expr_list.dict
 
     Nhint = len(anno_set)
@@ -236,8 +236,8 @@ def page(expr_list, expr_cluster, anno_list, alpha):
     score_arr = []
 
     # calculate value related to the entire cluster
-    for i in expr_list.dict:
-        score_arr.append(list(expr_list.dict[i])[expr_cluster])
+    for gene in expr_list.dict:
+        score_arr.append(list(expr_list.dict[gene])[expr_cluster])
     score_arr = np.array(score_arr).astype(np.float)
     gene_mean = np.mean(score_arr)
     gene_sd = np.std(score_arr)
@@ -246,7 +246,6 @@ def page(expr_list, expr_cluster, anno_list, alpha):
 
     for i, input_item in enumerate(input_arr_copy):
         # the 0 is included in the input array because of the permutations variable preceding gene_sd and gene_mean in the constructor
-
         input_arr_copy[i] = InputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster,
                                       input_item.expr_list,
                                       0, gene_mean, gene_sd)
@@ -261,13 +260,13 @@ def page(expr_list, expr_cluster, anno_list, alpha):
 def page_process(input_item):
     geneset_size = len(input_item.anno_list)
     score_arr = []
-
+    anno_map=dict.fromkeys(input_item.anno_list,0)
+    anno_map=defaultdict(int,anno_map)
     # for each gene set, calculate values
     for id in input_item.expr_list.dict:
         row = list(input_item.expr_list.dict[id])
-        if id in input_item.anno_list:
+        if id in anno_map:
             score_arr.append(row[input_item.expr_cluster])
-
     score_arr = np.array(score_arr).astype(np.float)
     geneset_mean = np.mean(score_arr)
     z_score = (input_item.gene_mean - geneset_mean) * math.sqrt(geneset_size) / input_item.gene_sd
@@ -275,7 +274,6 @@ def page_process(input_item):
     p_value = stats.norm.sf(abs(z_score))
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
                             len(input_item.anno_list), p_value, 0)
-
 
 # FDR correction for multiple hypothesis testing
 def benjamini_hochberg(gene_rankings):
@@ -368,4 +366,4 @@ if __name__ == '__main__':
 
     # perform a gsea test with a console printout and and including all values
     test = EnrichmentTest()
-    test.run("gsea", True, False)
+    test.run("page", True, False)

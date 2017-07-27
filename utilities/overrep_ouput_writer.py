@@ -10,7 +10,6 @@ class OUT:
 
         # print all significant gene sets
         if print_to_console:
-            print("\nSIGNIFICANT VALUES")
             print("\ngs1\tgs1.ngenes\tannotation_id\tannotation.ngenes\tncommon\tp_value\tFDR")
         self._output.write("\ngs1\tgs1.ngenes\tannotation_id\tannotation.ngenes\tncommon\tp_value\tFDR\n")
 

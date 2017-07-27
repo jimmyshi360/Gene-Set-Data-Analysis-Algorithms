@@ -12,7 +12,6 @@ class OUT:
         # print all significant gene sets
 
         if print_to_console:
-            print("\nSIGNIFICANT VALUES")
             print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
         self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
 
@@ -44,7 +43,6 @@ class OUT:
 
         # print all significant gene sets
         if print_to_console:
-            print("\nSIGNIFICANT VALUES")
             print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
         self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
 

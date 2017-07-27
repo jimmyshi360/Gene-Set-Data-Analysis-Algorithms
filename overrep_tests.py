@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 
 from flib.core.gmt import GMT
 from scipy import stats
@@ -26,7 +27,9 @@ call multiprocess() to generate output
 
 
 # general class for setting up and running an over-representation test
-class OverrepTest:
+
+class OverrepTest():
+
     def __init__(self):
         self.sample_sets = GMT(args.gene_sets)
         self.anno_list = GMT(args.annotation_list)
@@ -35,20 +38,22 @@ class OverrepTest:
         self.output = args.output
 
     def run(self, test_name, print_to_console, significant_only):
+        t1=time.time()
         rankings = self.switch(test_name)
         # passes output to the printer class
+        print time.time()-t1
+
         return OUT(rankings[0], rankings[1], self.output).printout(print_to_console, significant_only)
 
     # used by the run method to match the input with the correct test
     def switch(self, test_name):
-        return {
-            "fisher_exact": fisher_exact(self.sample_sets, self.anno_list, self.alpha, self.background),
-            "chi_squared": chi_squared(self.sample_sets, self.anno_list, self.alpha, self.background),
-            "binomial": binomial(self.sample_sets, self.anno_list, self.alpha, self.background),
-            "hypergeometric": hypergeometric(self.sample_sets, self.anno_list, self.alpha, self.background)
-
-        }.get(test_name, None)
-
+        if test_name=="fisher_exact":
+            return fisher_exact(self.sample_sets, self.anno_list, self.alpha, self.background)
+        elif test_name == "chi_squared":
+            return chi_squared(self.sample_sets, self.anno_list, self.alpha, self.background)
+        elif test_name == "binomial":
+            return binomial(self.sample_sets, self.anno_list, self.alpha, self.background)
+        return hypergeometric(self.sample_sets, self.anno_list, self.alpha, self.background)
 
 # each stat test will return an array of OverrepResults
 # contains all useful information to be outputted
@@ -96,7 +101,7 @@ def multiprocess(gsid, sample, map_arr, method):
         next_item = InputItem(anno_id, anno_list, background, gsid, sample.genesets[gsid])
         input_items.append(next_item)
 
-    p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+    p = multiprocessing.Pool(processes=8)
     results = p.map(method, input_items)
     p.close()
     p.join()
