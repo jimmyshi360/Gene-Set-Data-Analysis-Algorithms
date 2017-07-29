@@ -22,6 +22,7 @@ class EnrichmentTest:
         self.permutations = args.permutations
         self.alpha = args.rate
         self.output = args.output
+        self.weight = args.weight
 
     def run(self, test_name, print_to_console, significant_only):
         t1=time.time()
@@ -37,8 +38,7 @@ class EnrichmentTest:
             return wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
         elif test_name == "page":
             return page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
-
-        return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha)
+        return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha, self.weight)
 
 # each stat test will return an array of EnrichmentResults
 class EnrichmentResult:
@@ -56,7 +56,7 @@ class EnrichmentResult:
 # each enrichment test will require an array of InputItems
 # multiprocessing will map each item in the array to a worker
 class InputItem:
-    def __init__(self, anno_id, anno_list, expr_cluster, expr_list, permutations=None, gene_mean=None, gene_sd=None):
+    def __init__(self, anno_id, anno_list, expr_cluster, expr_list, permutations=None, weight=None, gene_mean=None, gene_sd=None):
         self.anno_id = anno_id
         self.anno_list = anno_list
         self.expr_cluster = expr_cluster
@@ -64,14 +64,15 @@ class InputItem:
         self.permutations = permutations
         self.gene_mean = gene_mean
         self.gene_sd = gene_sd
+        self.weight=weight
 
 
 # generates a list of input items to be mapped to several processors
-def generate_inputs(anno, expr_cluster, expr_list, permutations=None):
+def generate_inputs(anno, expr_cluster, expr_list, permutations=None, weight=None):
     input_items = []
     for anno_id in anno.genesets:
         if permutations != None:
-            input_items.append(InputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list, permutations))
+            input_items.append(InputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list, permutations, weight))
         else:
             input_items.append(InputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list))
     return input_items
@@ -87,10 +88,10 @@ def multiprocess(map_arr, method):
 
 
 # gsea main method to call
-def gsea(expr_list, expr_cluster, anno_list, permutations, alpha):
+def gsea(expr_list, expr_cluster, anno_list, permutations, alpha, weight):
     expr_list.sort(expr_cluster)
     # build multiprocessing inputs
-    input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations)
+    input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations, weight)
 
     gene_rankings = multiprocess(input_arr, gsea_process)
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
@@ -99,7 +100,7 @@ def gsea(expr_list, expr_cluster, anno_list, permutations, alpha):
 
 # GSEA multiprocessing function
 def gsea_process(input_item):
-    es = enrichment_score(input_item.anno_list, input_item.expr_cluster, input_item.expr_list, 1)
+    es = enrichment_score(input_item.anno_list, input_item.expr_cluster, input_item.expr_list, input_item.weight)
     es_arr = es_distr(input_item.expr_list, input_item.expr_cluster, input_item.anno_list, input_item.permutations)
     nes = normalize_score(es, es_arr)
     nes_arr = normalize_array(es_arr)
@@ -245,10 +246,10 @@ def page(expr_list, expr_cluster, anno_list, alpha):
     input_arr_copy = list(input_arr)
 
     for i, input_item in enumerate(input_arr_copy):
-        # the 0 is included in the input array because of the permutations variable preceding gene_sd and gene_mean in the constructor
+        # the 0 is included in the input array because of the permutation and weight variables preceding gene_sd and gene_mean in the constructor
         input_arr_copy[i] = InputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster,
                                       input_item.expr_list,
-                                      0, gene_mean, gene_sd)
+                                      0, 0,  gene_mean, gene_sd)
 
     gene_rankings = multiprocess(input_arr_copy, page_process)
 
@@ -332,10 +333,10 @@ if __name__ == '__main__':
         "-p",
         "--permutations",
         dest="permutations",
-        help="an integer for the number of GSEA permutations (OPTIONAL)",
+        help="an integer for the number of GSEA gene set permutations (OPTIONAL) (DEFAULT 1000)",
         metavar="INTEGER",
-        type=int
-
+        type=int,
+        default=1000
     )
     parser.add_argument(
         "-c",
@@ -345,6 +346,15 @@ if __name__ == '__main__':
         metavar="INTEGER",
         type=int,
         default=0)
+    parser.add_argument(
+        "-w",
+        "--GSEA weight",
+        dest="weight",
+        help="the weighting amount for GSEA (OPTIONAL) (DEFAULT 1)",
+        metavar="FLOAT",
+        type=float,
+        default=1
+        )
     parser.add_argument(
         "-o",
         "--output-file",
@@ -366,4 +376,4 @@ if __name__ == '__main__':
 
     # perform a gsea test with a console printout and and including all values
     test = EnrichmentTest()
-    test.run("page", True, False)
+    test.run("gsea", True, False)

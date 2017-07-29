@@ -116,7 +116,7 @@ def gen_table(sample_set, anno_set, background):
 
     list_anno_overlaps = len(sample_set.intersection(anno_set))
     if list_anno_overlaps == 0:
-        return 0
+        return -1
     # alternative code for other specifications
     # background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if background == None else len(background.background_genes)
 
@@ -151,7 +151,7 @@ def fisher_process(input_item):
     cont_table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
-    if cont_table == 0:
+    if cont_table == -1:
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = cont_table[0][0]
@@ -180,7 +180,7 @@ def hypergeometric_process(input_item):
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
-    if table == 0:
+    if table == -1:
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = table[0][0]
@@ -208,7 +208,7 @@ def binomial_process(input_item):
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
-    if table == 0:
+    if table == -1:
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = table[0][0]
@@ -238,7 +238,7 @@ def chi_process(input_item):
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
-    if table == 0:
+    if table == -1:
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = table[0][0]
