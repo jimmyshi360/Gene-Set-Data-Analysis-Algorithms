@@ -3,18 +3,9 @@ import unittest
 
 from enrichment_tests import *
 from flib.core.gmt import GMT
-
+from multiprocessing import cpu_count
 
 class TestStattests(unittest.TestCase):
-    def test_gsea(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
-        cluster = 0
-        permutations = 5
-        self.assertAlmostEqual(float(gsea(expr_list, cluster, anno, permutations, 1)[0][0].es), 0.629079429538,
-                               delta=0.0001)
-        self.assertAlmostEqual(float(gsea(expr_list, cluster, anno, permutations, 1)[0][1].es), 0.458915389493,
-                               delta=0.0001)
 
     def test_generate_inputs(self):
         anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
@@ -25,11 +16,22 @@ class TestStattests(unittest.TestCase):
         test_set = list(range(0, 40))
         test_set = set([str(i) for i in test_set])
 
-        self.assertEqual(generate_inputs(anno, cluster, expr_list, permutations)[0].anno_id, '0')
-        self.assertEqual(generate_inputs(anno, cluster, expr_list, permutations)[0].anno_list, test_set)
-        self.assertEqual(generate_inputs(anno, cluster, expr_list, permutations)[0].expr_cluster, 0)
-        self.assertEqual(generate_inputs(anno, cluster, expr_list, permutations)[0].expr_list, expr_list)
-        self.assertEqual(generate_inputs(anno, cluster, expr_list, permutations)[0].permutations, 5)
+        inputs=generate_inputs(anno, cluster, expr_list, permutations)
+        self.assertEqual(inputs[0].anno_id, '0')
+        self.assertEqual(inputs[0].anno_list, test_set)
+        self.assertEqual(inputs[0].expr_cluster, 0)
+        self.assertEqual(inputs[0].expr_list, expr_list)
+        self.assertEqual(inputs[0].permutations, 5)
+
+    def test_gsea(self):
+        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
+        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        cluster = 0
+        permutations = 5
+
+        gsea_result = gsea(expr_list, cluster, anno, permutations, 1.0, 1, cpu_count())
+        self.assertAlmostEqual(float(gsea_result[0][0].es), 0.629079429538, delta=0.0001)
+        self.assertAlmostEqual(float(gsea_result[0][1].es), 0.458915389493, delta=0.0001)
 
     def test_enrichment_score(self):
         anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt")).genesets['GO:0070507']
@@ -46,17 +48,19 @@ class TestStattests(unittest.TestCase):
         anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
         expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
         cluster = 0
-        self.assertAlmostEqual(float(wilcoxon(expr_list, cluster, anno, 1)[0][0].p_value), 1.1206994619e-10,
-                               delta=0.0001)
-        self.assertAlmostEqual(float(wilcoxon(expr_list, cluster, anno, 1)[0][1].p_value), 0.002463584445950147,
-                               delta=0.0001)
+
+        wilcoxon_result=wilcoxon(expr_list, cluster, anno, 1, cpu_count())
+        self.assertAlmostEqual(float(wilcoxon_result[0][0].p_value), 1.1206994619e-10, delta=0.0001)
+        self.assertAlmostEqual(float(wilcoxon_result[0][1].p_value), 0.002463584445950147, delta=0.0001)
 
     def test_page(self):
         anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
         expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
         cluster = 0
-        self.assertAlmostEqual(float(page(expr_list, cluster, anno, 1)[0][0].p_value), 6.35801240607e-17, delta=0.0001)
-        self.assertAlmostEqual(float(page(expr_list, cluster, anno, 1)[0][1].p_value), 1.1116067475e-10, delta=0.0001)
+
+        page_result=page(expr_list, cluster, anno, 1, cpu_count())
+        self.assertAlmostEqual(float(page_result[0][0].p_value), 6.35801240607e-17, delta=0.0001)
+        self.assertAlmostEqual(float(page_result[0][1].p_value), 1.1116067475e-10, delta=0.0001)
 
     def test_benjamini_hochberg(self):
         rankings = [EnrichmentResult(0, 0, 0, 0, 0.000162523456526, 0, 0),
@@ -65,9 +69,10 @@ class TestStattests(unittest.TestCase):
             , EnrichmentResult(0, 0, 0, 0, 0.118513682097, 0, 0), EnrichmentResult(0, 0, 0, 0, 0.138018032079, 0, 0)
             , EnrichmentResult(0, 0, 0, 0, 0.297867156785, 0, 0)]
 
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[0].FDR, 0.001137664, delta=0.0001)
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[2].FDR, 0.04949573, delta=0.0001)
-        self.assertAlmostEqual(benjamini_hochberg(rankings)[4].FDR, 0.1610210, delta=0.0001)
+        BH_result=benjamini_hochberg(rankings)
+        self.assertAlmostEqual(BH_result[0].FDR, 0.001137664, delta=0.0001)
+        self.assertAlmostEqual(BH_result[2].FDR, 0.04949573, delta=0.0001)
+        self.assertAlmostEqual(BH_result[4].FDR, 0.1610210, delta=0.0001)
 
     def test_significance_filter(self):
         rankings = [EnrichmentResult(0, 0, 0, 0, 0, 0.006), EnrichmentResult(0, 0, 1, 0, 0, 0.03),

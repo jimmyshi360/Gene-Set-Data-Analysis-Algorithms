@@ -23,22 +23,45 @@ class EnrichmentTest:
         self.alpha = args.rate
         self.output = args.output
         self.weight = args.weight
+        self.cpu_count=args.cpu
 
     def run(self, test_name, print_to_console, significant_only):
+        '''
+        runs an enrichment test, generates an html table
+
+        :param str test_name: Name of the test to be run
+        :param bool print_to_console: Specifies whether or not to print to the console
+        :param bool significant_only: Specifies whether or not to output only significant values
+        :return: Nothing, printout() will only write to the specified output file and to the console if specified
+        '''
+
         t1=time.time()
         rankings = self.switch(test_name)
         # passes output to the printer class
         print time.time()-t1
         if test_name == "gsea":
-            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(print_to_console, False)
-        return OUT(rankings[0], rankings[1], self.output).printout_E(print_to_console, False)
+            #html table
+            OUT(rankings[0], rankings[1], self.output).html_table_GSEA(significant_only,3)
+            #output file and console
+            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(print_to_console, significant_only)
+        #html table
+        OUT(rankings[0], rankings[1], self.output).html_table(significant_only,3)
+        #output file and console
+        return OUT(rankings[0], rankings[1], self.output).printout(print_to_console, significant_only)
 
     def switch(self, test_name):
+        '''
+        used by the run method to match the input with the correct test
+
+        :param str test_name: Name of the test to be run
+        :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+        '''
         if test_name=="wilcoxon":
-            return wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
+            return wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha,self.cpu_count)
         elif test_name == "page":
-            return page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha)
-        return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha, self.weight)
+            return page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha,self.cpu_count)
+        elif test_name == "gsea":
+            return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha, self.weight,self.cpu_count)
 
 # each stat test will return an array of EnrichmentResults
 class EnrichmentResult:
@@ -55,7 +78,7 @@ class EnrichmentResult:
 
 # each enrichment test will require an array of InputItems
 # multiprocessing will map each item in the array to a worker
-class InputItem:
+class EnrichmentInputItem:
     def __init__(self, anno_id, anno_list, expr_cluster, expr_list, permutations=None, weight=None, gene_mean=None, gene_sd=None):
         self.anno_id = anno_id
         self.anno_list = anno_list
@@ -66,40 +89,72 @@ class InputItem:
         self.gene_sd = gene_sd
         self.weight=weight
 
-
-# generates a list of input items to be mapped to several processors
 def generate_inputs(anno, expr_cluster, expr_list, permutations=None, weight=None):
+    '''
+    generates a list of input items to be mapped to several processors
+
+    :param GMT anno: Annotation set object
+    :param MAT expr_list: Object containing list of expression values
+    :param int expr_cluster: The expression cluster of interest
+    :param int permutations: Number of permutations for GSEA, disregarded if test is not GSEA
+    :param float weight: The weight of the GSEA test, disregarded if test is not GSEA
+    :return: An array of input items
+    '''
+
     input_items = []
     for anno_id in anno.genesets:
         if permutations != None:
-            input_items.append(InputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list, permutations, weight))
+            input_items.append(EnrichmentInputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list, permutations, weight))
         else:
-            input_items.append(InputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list))
+            input_items.append(EnrichmentInputItem(anno_id, anno.genesets[anno_id], expr_cluster, expr_list))
     return input_items
 
+def multiprocess(input_arr, method, cpu_count):
+    '''
+    executes a multiprocess which divides the work for each annotation set among processors
 
-# executes a multiprocess which divides the work for each annotation set among processors
-def multiprocess(map_arr, method):
-    p = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    results = p.map(method, map_arr)
+    :param list input_arr: The array of input items
+    :param func method: The enrichment test to be run
+    :param int cpu_count: Number of cores to be used
+    :return: The output of a method process --> an EnrichmentResult object
+    '''
+
+    p = multiprocessing.Pool(processes=cpu_count)
+    results = p.map(method, input_arr)
     p.close()
     p.join()
     return results
 
+def gsea(expr_list, expr_cluster, anno_list, permutations, alpha, weight, cpu_count):
+    '''
+    the gsea test
 
-# gsea main method to call
-def gsea(expr_list, expr_cluster, anno_list, permutations, alpha, weight):
+    :param MAT expr_list: Object containing list of expression values
+    :param int expr_cluster: The expression cluster of interest
+    :param GMT anno: Annotation set object
+    :param int permutations: Number of permutations for GSEA, disregarded if test is not GSEA
+    :param float alpha: The desired significance level
+    :param float weight: The weight of the GSEA test, disregarded if test is not GSEA
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
     expr_list.sort(expr_cluster)
     # build multiprocessing inputs
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations, weight)
 
-    gene_rankings = multiprocess(input_arr, gsea_process)
+    gene_rankings = multiprocess(input_arr, gsea_process, cpu_count)
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
     return [gene_rankings, significance_filter(gene_rankings, alpha)]
 
-
-# GSEA multiprocessing function
 def gsea_process(input_item):
+    '''
+    gsea sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: EnrichmentResult object
+    '''
+
     es = enrichment_score(input_item.anno_list, input_item.expr_cluster, input_item.expr_list, input_item.weight)
     es_arr = es_distr(input_item.expr_list, input_item.expr_cluster, input_item.anno_list, input_item.permutations)
     nes = normalize_score(es, es_arr)
@@ -110,9 +165,17 @@ def gsea_process(input_item):
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
                             len(input_item.anno_list), n_p, FDR, es, nes)
 
-
-# calculates enrichment score based of the max ES of a linear traversal path
 def enrichment_score(anno_set, expr_cluster, expr_list, weight):
+    '''
+    calculates enrichment score based of the max ES of a linear traversal path
+
+    :param set anno_set: Set of annotation set genes
+    :param int expr_cluster: The expression cluster of interest
+    :param MAT expr_list: Object containing expression list values
+    :param int weight: GSEA weighting option
+    :return: The enrichment score
+    '''
+
     anno_map = dict.fromkeys(anno_set, 0)
     anno_map = defaultdict(int, anno_map)
     rankings_map = expr_list.dict
@@ -144,8 +207,17 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     return max(max_ES, abs(min_ES))
 
 
-# creates a distribution of enrichment scores through permutations
 def es_distr(expr_list, expr_cluster, anno_list, permutations):
+    '''
+    generates a distribution of enrichment scores through permutations
+
+    :param MAT expr_list: Object containing list of expression values
+    :param int expr_cluster: The expression cluster of interest
+    :param GMT anno: Annotation set object
+    :param int permutations: Number of permutations for GSEA, disregarded if test is not GSEA
+    :return: An array of enrichment scores
+    '''
+
     es_arr = []
     rankings_map = expr_list.dict
     for i in range(0, permutations):
@@ -154,8 +226,16 @@ def es_distr(expr_list, expr_cluster, anno_list, permutations):
     return es_arr
 
 
-# normalizes the enrichment score to account for different gene set sizes
+
 def normalize_score(es, es_arr):
+    '''
+    normalizes the enrichment score to account for different gene set sizes
+
+    :param int es: Enrichment score
+    :param list es_arr: List of enrichment scores obtained through permutations
+    :return: The normalized enrichment score
+    '''
+
     total = 0
     count = 0
     for e in es_arr:
@@ -165,8 +245,15 @@ def normalize_score(es, es_arr):
     return es / (total / count)
 
 
-# normalizes the array to account for different gene set sizes
+
 def normalize_array(es_arr):
+    '''
+    normalizes the array to account for different gene set sizes
+
+    :param list es_arr: List of enrichment scores obtained through permutations
+    :return: The normalized array
+    '''
+
     null_distr = []
     total = 0
     count = 0
@@ -179,8 +266,15 @@ def normalize_array(es_arr):
     return null_distr
 
 
-# obtain nominal p value from the enrichment score distribution
 def n_p_value(es, es_arr):
+    '''
+    calculates the nominal p value from the enrichment score distribution
+
+    :param int es: Enrichment score
+    :param list es_arr: List of enrichment scores obtained through permutations
+    :return: The nominal p value
+    '''
+
     total = np.sum(es_arr)
     mean = total / len(es_arr)
     if es == mean:
@@ -200,19 +294,35 @@ def n_p_value(es, es_arr):
         return float(len(tail)) / float(len(es_arr))
 
 
-def wilcoxon(expr_list, expr_cluster, anno_list, alpha):
+def wilcoxon(expr_list, expr_cluster, anno_list, alpha, cpu_count):
+    '''
+    the wilcoxon test
+
+    :param MAT expr_list: Object containing list of expression values
+    :param int expr_cluster: The expression cluster of interest
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
     global score_arr
     score_arr = []
     # build multiprocessing inputs
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list)
-    gene_rankings = multiprocess(input_arr, wilcoxon_process)
+    gene_rankings = multiprocess(input_arr, wilcoxon_process, cpu_count)
 
     rankings_final = benjamini_hochberg(gene_rankings)
     return [rankings_final, significance_filter(rankings_final, alpha)]
 
-
-# wilcoxon multiprocess method
 def wilcoxon_process(input_item):
+    '''
+    wilcoxon sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: EnrichmentResult object
+    '''
+
     for gene in input_item.anno_list:
         row_arr = []
         if gene in input_item.expr_list.dict:
@@ -231,9 +341,17 @@ def wilcoxon_process(input_item):
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
                             len(input_item.anno_list), p_value, 0)
 
+def page(expr_list, expr_cluster, anno_list, alpha, cpu_count):
+    '''
+    the page test
 
-# parametric analysis gene enrichment test
-def page(expr_list, expr_cluster, anno_list, alpha):
+    :param MAT expr_list: Object containing list of expression values
+    :param int expr_cluster: The expression cluster of interest
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
     score_arr = []
 
     # calculate value related to the entire cluster
@@ -247,18 +365,23 @@ def page(expr_list, expr_cluster, anno_list, alpha):
 
     for i, input_item in enumerate(input_arr_copy):
         # the 0 is included in the input array because of the permutation and weight variables preceding gene_sd and gene_mean in the constructor
-        input_arr_copy[i] = InputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster,
-                                      input_item.expr_list,
-                                      0, 0,  gene_mean, gene_sd)
+        input_arr_copy[i] = EnrichmentInputItem(input_item.anno_id, input_item.anno_list, input_item.expr_cluster,
+                                                input_item.expr_list,
+                                                0, 0, gene_mean, gene_sd)
 
-    gene_rankings = multiprocess(input_arr_copy, page_process)
+    gene_rankings = multiprocess(input_arr_copy, page_process, cpu_count)
 
     rankings_final = benjamini_hochberg(gene_rankings)
     return [rankings_final, significance_filter(rankings_final, alpha)]
 
-
-# page multiprocess method
 def page_process(input_item):
+    '''
+    page sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: EnrichmentResult object
+    '''
+
     geneset_size = len(input_item.anno_list)
     score_arr = []
     anno_map=dict.fromkeys(input_item.anno_list,0)
@@ -276,8 +399,15 @@ def page_process(input_item):
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
                             len(input_item.anno_list), p_value, 0)
 
-# FDR correction for multiple hypothesis testing
+
 def benjamini_hochberg(gene_rankings):
+    '''
+    benjamini hochberg FDR correction for multiple hypothesis testing
+
+    :param list gene_rankings: Object containing EnrichmentResult objects
+    :return: A p value adjusted array of EnrichmentResult objects
+    '''
+
     output = []
     # sort rankings before applyign BH correction
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
@@ -295,9 +425,15 @@ def benjamini_hochberg(gene_rankings):
         prev_bh_value = bh_value
     return output
 
-
-# filters out significant items
 def significance_filter(gene_rankings, alpha):
+    '''
+    filters out significant items under the alpha level
+
+    :param list gene_rankings: Object containing EnrichmentResult objects
+    :param float alpha: The desired significance level
+    :return: A filtered array of EnrichmentResult objects
+    '''
+
     significant_values = []
     for i, E_Result in enumerate(gene_rankings):
         if E_Result.FDR <= alpha:
@@ -371,9 +507,17 @@ if __name__ == '__main__':
         metavar="FLOAT",
         type=float,
         default=0.05)
+    parser.add_argument(
+        "-i",
+        "--the number of cores to be used",
+        dest="cpu",
+        help="an integer for the amount of cores (DEFAULT 1)",
+        metavar="INTEGER",
+        type=int,
+        default=1)
 
     args = parser.parse_args()
 
     # perform a gsea test with a console printout and and including all values
     test = EnrichmentTest()
-    test.run("gsea", True, False)
+    test.run("page", True, False)

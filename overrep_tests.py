@@ -29,31 +29,50 @@ call multiprocess() to generate output
 # general class for setting up and running an over-representation test
 
 class OverrepTest():
-
     def __init__(self):
         self.sample_sets = GMT(args.gene_sets)
         self.anno_list = GMT(args.annotation_list)
         self.background = BACKGROUND([], args.background_list)
         self.alpha = args.rate
         self.output = args.output
+        self.cpu_count = args.cpu
 
     def run(self, test_name, print_to_console, significant_only):
-        t1=time.time()
+        '''
+        runs an overrep test, generates an HTML table
+
+        :param str test_name: Name of the test to be run
+        :param bool print_to_console: Specifies whether or not to print to the console
+        :param bool significant_onky: Specifies whether or not to only output significant results
+        :return: Nothing, printout() will only write to the specified output file and to the console if specified
+        '''
+
+        t1 = time.time()
         rankings = self.switch(test_name)
         # passes output to the printer class
-        print time.time()-t1
 
+        #html table
+        OUT(rankings[0], rankings[1], self.output).html_table(significant_only, 3)
+        #output file and table
         return OUT(rankings[0], rankings[1], self.output).printout(print_to_console, significant_only)
 
-    # used by the run method to match the input with the correct test
     def switch(self, test_name):
-        if test_name=="fisher_exact":
-            return fisher_exact(self.sample_sets, self.anno_list, self.alpha, self.background)
+        '''
+        used by the run method to match the input with the correct test
+
+        :param str test_name: The name of the test to be executed
+        :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+        '''
+
+        if test_name == "fisher_exact":
+            return fisher_exact(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
         elif test_name == "chi_squared":
-            return chi_squared(self.sample_sets, self.anno_list, self.alpha, self.background)
+            return chi_squared(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
         elif test_name == "binomial":
-            return binomial(self.sample_sets, self.anno_list, self.alpha, self.background)
-        return hypergeometric(self.sample_sets, self.anno_list, self.alpha, self.background)
+            return binomial(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
+        elif test_name == "hypergeometric":
+            return hypergeometric(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
+
 
 # each stat test will return an array of OverrepResults
 # contains all useful information to be outputted
@@ -70,7 +89,7 @@ class OverrepResult:
 
 # each overrep test will require an array of InputItems
 # multiprocessing will map each item in the array to a worker
-class InputItem:
+class OverrepInputItem:
     def __init__(self, anno_id, anno_list, background, gsid, gene_set):
         self.anno_id = anno_id
         self.anno_list = anno_list
@@ -79,29 +98,45 @@ class InputItem:
         self.gene_set = gene_set
 
 
-# generates a list of input items to be mapped to several processors
 def generate_inputs(anno, background):
+    '''
+    generates a list of incomplete input items to be mapped to several processors
+    :param int gsid: Id of the current gene set
+    :param GMT sample: Sample set object
+    :param BACKGROUND background: Object containing background gene information
+    :return: The output of a method process --> an OverrepResult object
+    '''
+
     input_items = []
     for anno_id in anno.genesets:
         input_items.append([anno_id, anno.genesets[anno_id], background])
     return input_items
 
+def multiprocess(gsid, sample, input_arr, method, cpu_count):
+    '''
+    completes the input array for each specific sample gene set
+    each gene set has its own additional input items to be appended to the array
+    executes a multiprocess which divides the work for each annotation set among processors
 
-# completes the input array for each specific sample gene set
-# each gene set has its own additional input items to be appended to the array
-# executes a multiprocess which divides the work for each annotation set among processors
-def multiprocess(gsid, sample, map_arr, method):
+    :param int gsid: Id of the current gene set
+    :param GMT sample: Sample set object
+    :param list input_arr: Incomplete input array
+    :param func method: The overrep test to be run
+    :param int cpu_count: The number of cores to be used
+    :return: The output of a method process --> an OverrepResult object
+    '''
+
     input_items = []
-    for i, row in enumerate(map_arr):
+    for i, row in enumerate(input_arr):
         anno_id = row[0]
         anno_list = row[1]
         background = row[2]
 
         # gsid and the gene set are the above mentioned additional items
-        next_item = InputItem(anno_id, anno_list, background, gsid, sample.genesets[gsid])
+        next_item = OverrepInputItem(anno_id, anno_list, background, gsid, sample.genesets[gsid])
         input_items.append(next_item)
 
-    p = multiprocessing.Pool(processes=8)
+    p = multiprocessing.Pool(processes=cpu_count)
     results = p.map(method, input_items)
     p.close()
     p.join()
@@ -109,8 +144,16 @@ def multiprocess(gsid, sample, map_arr, method):
     return results
 
 
-# generate 2x2 contingency table by counting various overlaps
 def gen_table(sample_set, anno_set, background):
+    '''
+    generate 2x2 contingency table by counting various overlaps
+
+    :param set sample_set: Set of sample genes
+    :param set anno_set: Set of annotation genes
+    :param BACKGROUND background: Object containing background genes
+    :return: 2 dimensional table as described at the top of the program
+    '''
+
     if background is None:
         background = BACKGROUND(anno_set.intersection(sample_set))
 
@@ -131,7 +174,18 @@ def gen_table(sample_set, anno_set, background):
     return [[list_anno_overlaps, genome_anno_overlaps], [list_genome_overlaps, genome_only]]
 
 
-def fisher_exact(sample_sets, anno, alpha, background):
+def fisher_exact(sample_sets, anno, alpha, background, cpu_count):
+    '''
+    the fisher exact test
+
+    :param GMT sample_sets: Sample set object
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param BACKGROUND background: Object containing background genes
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
     gene_rankings = []
     # set up multiprocessing inputs
     map_arr = generate_inputs(anno, background)
@@ -139,15 +193,20 @@ def fisher_exact(sample_sets, anno, alpha, background):
     for gsid in sample_sets.genesets:
 
         # each subprocess will append its results to the input_item array
-        input_items = multiprocess(gsid, sample_sets, map_arr, fisher_process)
+        input_items = multiprocess(gsid, sample_sets, map_arr, fisher_process, cpu_count)
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
-
-# fisher sub-method for multiprocessing
 def fisher_process(input_item):
+    '''
+    fisher sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: OverrepResult object
+    '''
+
     cont_table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
@@ -161,22 +220,40 @@ def fisher_process(input_item):
                          p_value, list_anno_overlaps, 0)
 
 
-def hypergeometric(sample_sets, anno, alpha, background):
+def hypergeometric(sample_sets, anno, alpha, background, cpu_count):
+    '''
+    the hypergeometric test
+
+    :param GMT sample_sets: Sample set object
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param BACKGROUND background: Object containing background genes
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
+
     gene_rankings = []
     # set up multiprocessing inputs
     map_arr = generate_inputs(anno, background)
 
     for gsid in sample_sets.genesets:
         # each subprocess will append its results to the input_item array
-        input_items = multiprocess(gsid, sample_sets, map_arr, hypergeometric_process)
+        input_items = multiprocess(gsid, sample_sets, map_arr, hypergeometric_process, cpu_count)
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 
-# hypergeometric sub-method for multiprocessing, m_arr contains the parameters
 def hypergeometric_process(input_item):
+    '''
+    hypergeometric sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: OverrepResult object
+    '''
+
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
@@ -190,21 +267,38 @@ def hypergeometric_process(input_item):
                          p_value, list_anno_overlaps, 0)
 
 
-def binomial(sample_sets, anno, alpha, background):
+def binomial(sample_sets, anno, alpha, background, cpu_count):
+    '''
+    the binomial test
+
+    :param GMT sample_sets: Sample set object
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param BACKGROUND background: Object containing background genes
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
     gene_rankings = []
     # set up multiprocessing inputs
     map_arr = generate_inputs(anno, background)
     for gsid in sample_sets.genesets:
         # each subprocess will append its results to the input_item array
-        input_items = multiprocess(gsid, sample_sets, map_arr, binomial_process)
+        input_items = multiprocess(gsid, sample_sets, map_arr, binomial_process, cpu_count)
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 
-# binomial sub-method for multiprocessing
 def binomial_process(input_item):
+    '''
+    binomial sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: OverrepResult object
+    '''
+
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
@@ -219,22 +313,38 @@ def binomial_process(input_item):
                          p_value, list_anno_overlaps, 0)
 
 
-def chi_squared(sample_sets, anno, alpha, background):
+def chi_squared(sample_sets, anno, alpha, background, cpu_count):
+    '''
+    the chi squared test
+
+    :param GMT sample_sets: Sample set object
+    :param GMT anno: Annotation set object
+    :param float alpha: The desired significance level
+    :param BACKGROUND background: Object containing background genes
+    :param int cpu_count: Specifies the number of cores to be used
+    :return: An array of 2 items, the gene rankings and the filtered FDR rankings
+    '''
+
     gene_rankings = []
     # set up multiprocessing inputs
     map_arr = generate_inputs(anno, background)
     for gsid in sample_sets.genesets:
         # each subprocess will append its results to the input_item array
-        input_items = multiprocess(gsid, sample_sets, map_arr, chi_process)
+        input_items = multiprocess(gsid, sample_sets, map_arr, chi_process, cpu_count)
         for input_item in input_items:
             gene_rankings.append(input_item)
 
     final_rankings = benjamini_hochberg(gene_rankings)
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
-
-# chi squared sub-method for multiprocessing
 def chi_process(input_item):
+    '''
+    chi squared sub-method for multiprocessing
+
+    :param list input_item: Object containing input fields
+    :return: OverrepResult object
+    '''
+
     table = gen_table(input_item.gene_set, input_item.anno_list, input_item.background)
 
     # in the case of no overlaps
@@ -247,17 +357,23 @@ def chi_process(input_item):
                          p_value, list_anno_overlaps, 0)
 
 
-# FDR correction for multiple hypothesis testing
 def benjamini_hochberg(gene_rankings):
+    '''
+    benjamini hochberg FDR correction for multiple hypothesis testing
+
+    :param list gene_rankings: Object containing OverrepResult objects
+    :return: A p value adjusted array of OverrepResult objects
+    '''
+
     output = []
-    #sort rankings before correcting p values
+    # sort rankings before correcting p values
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
 
     prev_bh_value = 0
-    for i, E_Result in enumerate(gene_rankings):
+    for i, OR_Result in enumerate(gene_rankings):
 
         # standard BH correction based on ranking
-        bh_value = E_Result.p_value * len(gene_rankings) / float(i + 1)
+        bh_value = OR_Result.p_value * len(gene_rankings) / float(i + 1)
         bh_value = min(bh_value, 1)
 
         # to preserve monotonicity
@@ -265,19 +381,26 @@ def benjamini_hochberg(gene_rankings):
         if bh_value < prev_bh_value:
             output[i - 1].FDR = bh_value
 
-        E_Result.FDR = bh_value
-        output.append(E_Result)
+        OR_Result.FDR = bh_value
+        output.append(OR_Result)
         prev_bh_value = bh_value
 
     return output
 
 
-# filters out significant items under the alpha level
 def significance_filter(gene_rankings, alpha):
+    '''
+    filters out significant items under the alpha level
+
+    :param list gene_rankings: Object containing OverrepResult objects
+    :param float alpha: The desired significance level
+    :return: A filtered array of OverrepResult objects
+    '''
+
     significant_values = []
-    for i, E_Result in enumerate(gene_rankings):
-        if E_Result.FDR <= alpha:
-            significant_values.append(E_Result)
+    for i, OR_Result in enumerate(gene_rankings):
+        if OR_Result.FDR <= alpha:
+            significant_values.append(OR_Result)
 
     return significant_values
 
@@ -330,6 +453,14 @@ if __name__ == '__main__':
         metavar="FLOAT",
         type=float,
         default=0.05)
+    parser.add_argument(
+        "-i",
+        "--the number of cores to be used",
+        dest="cpu",
+        help="an integer for the amount of cores (DEFAULT 1)",
+        metavar="INTEGER",
+        type=int,
+        default=1)
 
     args = parser.parse_args()
 

@@ -1,5 +1,6 @@
 import unittest
 import os
+from multiprocessing import cpu_count
 from flib.core.gmt import GMT
 
 from overrep_tests import *
@@ -58,7 +59,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
         background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
 
-        test_result = binomial(sample, anno, 1, background)
+        test_result = binomial(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000147087950101, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 0.00367719875252, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0148019510684, delta=0.0001)
@@ -70,7 +71,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 25
-        self.assertAlmostEqual(float(binomial(sample, anno, 1, background)[0][0].p_value), 0.0229768421702,
+        self.assertAlmostEqual(float(binomial(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0229768421702,
                                delta=0.0001)
 
     def test_fisher(self):
@@ -78,7 +79,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
         background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
 
-        test_result = fisher_exact(sample, anno, 1, background)
+        test_result = fisher_exact(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000162523456526, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 0.00406308641316, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0154958566105, delta=0.0001)
@@ -90,7 +91,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 24
-        self.assertAlmostEqual(float(fisher_exact(sample, anno, 1, background)[0][0].p_value), 0.0255246814673,
+        self.assertAlmostEqual(float(fisher_exact(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0255246814673,
                                delta=0.0001)
 
     def test_chi_squared(self):
@@ -98,7 +99,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
         background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
 
-        test_result = chi_squared(sample, anno, 1, background)
+        test_result = chi_squared(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 2.463009591e-12, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 6.15752397749e-11, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].p_value), 1.07544595815e-10, delta=0.0001)
@@ -108,7 +109,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files", "test_gmt.gmt"))
         background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
 
-        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background)[0][0].p_value), 1.27701446634e-64,
+        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value), 1.27701446634e-64,
                                delta=0.0001)
 
     def test_hypergeometric(self):
@@ -116,7 +117,7 @@ class TestStattests(unittest.TestCase):
         sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
         background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
 
-        test_result = hypergeometric(sample, anno, 1, background)
+        test_result = hypergeometric(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000139835378986, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 0.00349588447465, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0148068629756, delta=0.0001)
@@ -128,7 +129,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 26
-        self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background)[0][0].p_value), 0.0219349067622,
+        self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0219349067622,
                                delta=0.0001)
 
 
