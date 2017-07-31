@@ -6,20 +6,19 @@ Date last modified:
 Python Version: 2.7
 '''
 
-import unittest
 import os
+import unittest
 from multiprocessing import cpu_count
-from flib.core.gmt import GMT
 
-from overrep_tests import *
-from utilities.background import BACKGROUND
+from elib.core.overrep_tests import *
+from elib.utils.background import BACKGROUND
 
 
 class TestStattests(unittest.TestCase):
     def test_gen_table(self):
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt")).genesets['0']
-        sample = GMT(os.path.join("unittest_files", "test_gmt.gmt")).genesets['0']
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt")).genesets['0']
+        sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt")).genesets['0']
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
         # contingency table from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 24-26
@@ -30,8 +29,8 @@ class TestStattests(unittest.TestCase):
         self.assertEqual(cont_table[1][1], 19960)
 
     def test_generate_inputs(self):
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
         self.assertEqual(generate_inputs(anno, background)[0][0], '0')
         test_set = list(range(0, 40))
         test_set = set([str(i) for i in test_set])
@@ -63,9 +62,9 @@ class TestStattests(unittest.TestCase):
         self.assertTrue(3 in test_arr)
 
     def test_binomial(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "GMT.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "BACKGROUND.txt"))
 
         test_result = binomial(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000147087950101, delta=0.0001)
@@ -73,9 +72,9 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0148019510684, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].FDR), 0.173734101344, delta=0.0001)
 
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        sample = GMT(os.path.join("unittest_files", "test_gmt.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 25
@@ -83,9 +82,9 @@ class TestStattests(unittest.TestCase):
                                delta=0.0001)
 
     def test_fisher(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "GMT.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "BACKGROUND.txt"))
 
         test_result = fisher_exact(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000162523456526, delta=0.0001)
@@ -93,9 +92,9 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0154958566105, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].FDR), 0.176770459625, delta=0.0001)
 
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        sample = GMT(os.path.join("unittest_files", "test_gmt.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 24
@@ -103,9 +102,9 @@ class TestStattests(unittest.TestCase):
                                delta=0.0001)
 
     def test_chi_squared(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "GMT.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "BACKGROUND.txt"))
 
         test_result = chi_squared(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 2.463009591e-12, delta=0.0001)
@@ -113,17 +112,17 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(test_result[0][1].p_value), 1.07544595815e-10, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].FDR), 8.96204965125e-10, delta=0.0001)
 
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        sample = GMT(os.path.join("unittest_files", "test_gmt.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
         self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value), 1.27701446634e-64,
                                delta=0.0001)
 
     def test_hypergeometric(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        sample = GMT(os.path.join("unittest_files", "GMT.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "BACKGROUND.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "GMT.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "BACKGROUND.txt"))
 
         test_result = hypergeometric(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000139835378986, delta=0.0001)
@@ -131,9 +130,9 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0148068629756, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].FDR), 0.173762853283, delta=0.0001)
 
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        sample = GMT(os.path.join("unittest_files", "test_gmt.gmt"))
-        background = BACKGROUND([], os.path.join("unittest_files", "test_background.txt"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
+        background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 26

@@ -11,8 +11,9 @@ import time
 
 from flib.core.gmt import GMT
 from scipy import stats
-from utilities.background import BACKGROUND
-from utilities.overrep_ouput_writer import OUT
+
+from elib.utils.background import BACKGROUND
+from elib.utils.overrep_ouput_writer import OUT
 
 '''
 2x2 contingency table for over representation tests
@@ -428,7 +429,6 @@ if __name__ == '__main__':
         metavar="STRING",
         required=True
     )
-
     parser.add_argument(
         "-g",
         "--gene-sets file",
@@ -437,7 +437,6 @@ if __name__ == '__main__':
         metavar=".gmt FILE",
         required=True
     )
-
     parser.add_argument(
         "-a",
         "--annotations-file",
@@ -454,7 +453,6 @@ if __name__ == '__main__':
         help="background gene list file for comparision (DEFAULT None)",
         metavar=".txt FILE"
     )
-
     parser.add_argument(
         "-o",
         "--output-file",
@@ -475,10 +473,10 @@ if __name__ == '__main__':
         "-i",
         "--the number of cores to be used",
         dest="cpu",
-        help="an integer for the amount of cores (DEFAULT 1)",
+        help="an integer for the amount of cores (DEFAULT cpu_count())",
         metavar="INTEGER",
         type=int,
-        default=1)
+        default=multiprocessing.cpu_count())
     parser.add_argument(
         "-d",
         "--the decimal precision",
@@ -506,6 +504,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # perform a fisher_exact test with a console printout and including all values
     test = OverrepTest()
     test.run()

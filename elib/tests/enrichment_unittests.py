@@ -8,16 +8,18 @@ Python Version: 2.7
 
 import os
 import unittest
-
-from enrichment_tests import *
-from flib.core.gmt import GMT
 from multiprocessing import cpu_count
+
+from flib.core.gmt import GMT
+
+from elib.core.enrichment_tests import *
+
 
 class TestStattests(unittest.TestCase):
 
     def test_generate_inputs(self):
-        anno = GMT(os.path.join("unittest_files", "test_go.gmt"))
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
+        expr_list = MAT(os.path.join("files","unittest_files", "CLUSTERS.mat"))
         cluster = 0
         permutations = 5
 
@@ -32,8 +34,8 @@ class TestStattests(unittest.TestCase):
         self.assertEqual(inputs[0].permutations, 5)
 
     def test_gsea(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        expr_list = MAT(os.path.join("files","unittest_files", "CLUSTERS.mat"))
         cluster = 0
         permutations = 5
 
@@ -42,8 +44,8 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(gsea_result[0][1].es), 0.458915389493, delta=0.0001)
 
     def test_enrichment_score(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt")).genesets['GO:0070507']
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt")).genesets['GO:0070507']
+        expr_list = MAT(os.path.join("files","unittest_files", "CLUSTERS.mat"))
         cluster = 0
 
         self.assertAlmostEqual(float(enrichment_score(anno, cluster, expr_list, 1)), 0.629079429538, delta=0.0001)
@@ -53,8 +55,8 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(normalize_score(0.629079429538, arr), 1.89207339265, delta=0.0001)
 
     def test_wilcoxon(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        expr_list = MAT(os.path.join("files","unittest_files", "CLUSTERS.mat"))
         cluster = 0
 
         wilcoxon_result=wilcoxon(expr_list, cluster, anno, 1, cpu_count())
@@ -62,8 +64,8 @@ class TestStattests(unittest.TestCase):
         self.assertAlmostEqual(float(wilcoxon_result[0][1].p_value), 0.002463584445950147, delta=0.0001)
 
     def test_page(self):
-        anno = GMT(os.path.join("unittest_files", "GO_shortened.gmt"))
-        expr_list = MAT(os.path.join("test_files", "CLUSTERS.mat"))
+        anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))
+        expr_list = MAT(os.path.join("files","unittest_files", "CLUSTERS.mat"))
         cluster = 0
 
         page_result=page(expr_list, cluster, anno, 1, cpu_count())

@@ -9,14 +9,15 @@ Python Version: 2.7
 import math
 import multiprocessing
 import sys
-import numpy as np
 import time
-
-from scipy import stats
 from collections import defaultdict
+
+import numpy as np
 from flib.core.gmt import GMT
-from utilities.enrichment_output_writer import OUT
-from utilities.mat import MAT
+from scipy import stats
+
+from elib.utils.mat import MAT
+from elib.utils.enrichment_output_writer import OUT
 
 score_arr = []
 
@@ -473,7 +474,6 @@ if __name__ == '__main__':
         metavar=".gmt FILE",
         required=True
     )
-
     parser.add_argument(
         "-e",
         "--gene experessions-file",
@@ -486,7 +486,7 @@ if __name__ == '__main__':
         "-p",
         "--permutations",
         dest="permutations",
-        help="an integer for the number of GSEA gene set permutations (OPTIONAL) (DEFAULT 1000)",
+        help="an integer for the number of GSEA gene set permutations (DEFAULT 1000)",
         metavar="INTEGER",
         type=int,
         default=1000
@@ -503,7 +503,7 @@ if __name__ == '__main__':
         "-w",
         "--GSEA weight",
         dest="weight",
-        help="the weighting amount for GSEA (OPTIONAL) (DEFAULT 1)",
+        help="the weighting amount for GSEA (DEFAULT 1)",
         metavar="FLOAT",
         type=float,
         default=1
@@ -528,10 +528,10 @@ if __name__ == '__main__':
         "-i",
         "--the number of cores to be used",
         dest="cpu",
-        help="an integer for the amount of cores (DEFAULT 1)",
+        help="an integer for the amount of cores (DEFAULT cpu_count())",
         metavar="INTEGER",
         type=int,
-        default=1)
+        default=multiprocessing.cpu_count())
     parser.add_argument(
         "-d",
         "--the decimal precision",
@@ -559,6 +559,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # perform a gsea test with a console printout and and including all values
     test = EnrichmentTest()
     test.run()

@@ -1,4 +1,4 @@
 # flib
 git+https://github.com/FunctionLab/function.git@master
-numpy==1.13.0
-scipy==0.16.1
+numpy==1.13.1+mkl
+scipy==0.19.1
