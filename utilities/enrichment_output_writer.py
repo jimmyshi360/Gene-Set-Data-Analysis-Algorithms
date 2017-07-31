@@ -1,3 +1,11 @@
+'''
+File name: enrichment_output_writer.py
+Authors: Jimmy Shi
+Date created: 6/28/2017
+Date last modified:
+Python Version: 2.7
+'''
+
 import os
 import webbrowser
 from HTML import table
@@ -10,7 +18,7 @@ class OUT:
         self.deleteContent(self._output)
         self._significant_rankings = significant_rankings
 
-    def printout_GSEA(self, print_to_console, significant_only):
+    def printout_GSEA(self, print_to_console, significant_only, precision):
         '''
         printing function for gsea
 
@@ -34,10 +42,21 @@ class OUT:
             output_arr.append(E_Result.expr_list_ngenes)
             output_arr.append(E_Result.anno_id)
             output_arr.append(E_Result.anno_ngenes)
-            output_arr.append(E_Result.p_value)
-            output_arr.append(E_Result.FDR)
-            output_arr.append(E_Result.es)
-            output_arr.append(E_Result.nes)
+
+            if precision != -1:
+                p_value=round(E_Result.p_value,precision)
+                FDR = round(E_Result.FDR, precision)
+                es=round(E_Result.es,precision)
+                nes=round(E_Result.nes,precision)
+            else:
+                p_value = E_Result.p_value
+                FDR = E_Result.FDR
+                es = E_Result.es
+                nes = E_Result.nes
+            output_arr.append(p_value)
+            output_arr.append(FDR)
+            output_arr.append(es)
+            output_arr.append(nes)
             output_arr = map(str, output_arr)
 
             self._output.write('\t'.join(output_arr) + "\n")
@@ -51,7 +70,7 @@ class OUT:
         generates and opens a html file for gsea in the default browser
 
         :param bool significant_only: Specifies whether or not to only output significant items
-        :param bool precision: Specifies the decimal precision of the output, precision = 3 --> 3 decimal places
+        :param bool precision: Specifies the decimal precision of the output, precision = 3 --> 3 decimal places, -1 will remove decimal restriction
         :return: Nothing, will only write to the table.html file and open the file in a browser
         '''
 
@@ -64,9 +83,18 @@ class OUT:
 
         output_arr = []
         for E_Result in rankings:
-            p_value = round(E_Result.p_value, precision)
-            FDR = round(E_Result.FDR, precision)
-            next_row=[E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value,FDR,E_Result.es,E_Result.nes]
+            if precision!=-1:
+                p_value = round(E_Result.p_value, precision)
+                FDR = round(E_Result.FDR, precision)
+                es=round(E_Result.es, precision)
+                nes=round(E_Result.nes, precision)
+            else:
+                p_value = E_Result.p_value
+                FDR = E_Result.FDR
+                es = E_Result.es
+                nes = E_Result.nes
+
+            next_row=[E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value, FDR, es,nes]
             next_row=map(str, next_row)
             output_arr.append(next_row)
 
@@ -77,12 +105,12 @@ class OUT:
         url = "file://"+path
         webbrowser.open(url)
 
-    def printout(self, print_to_console, significant_only):
+    def printout(self, print_to_console, significant_only, precision):
         '''
         printing function for all other enrichment tests
 
         :param bool print_to_console: Specifies whether or not to print to console
-        :param bool significant_onky: Specifies whether or not to only output significant items
+        :param bool significant_only: Specifies whether or not to only output significant items
         :return: Nothing, will only write to the specified output file and to the console if specified
         '''
 
@@ -101,8 +129,15 @@ class OUT:
             output_arr.append(E_Result.expr_list_ngenes)
             output_arr.append(E_Result.anno_id)
             output_arr.append(E_Result.anno_ngenes)
-            output_arr.append(E_Result.p_value)
-            output_arr.append(E_Result.FDR)
+
+            if precision!=-1:
+                p_value = round(E_Result.p_value, precision)
+                FDR = round(E_Result.FDR, precision)
+            else:
+                p_value = E_Result.p_value
+                FDR = E_Result.FDR
+            output_arr.append(p_value)
+            output_arr.append(FDR)
             output_arr = map(str, output_arr)
 
             self._output.write('\t'.join(output_arr) + "\n")
@@ -116,8 +151,8 @@ class OUT:
         '''
         generates and opens a html file in the default browser
 
-        :param bool significant_onky: Specifies whether or not to only output significant items
-        :param bool precision: Specifies the decimal precision of the output, precision = 3 --> 3 decimal places
+        :param bool significant_only: Specifies whether or not to only output significant items
+        :param bool precision: Specifies the decimal precision of the output, precision = 3 --> 3 decimal places, -1 will remove decimal restriction
         :return: Nothing, will only write to the table.html file and open the file in a browser
         '''
 
@@ -130,8 +165,12 @@ class OUT:
 
         output_arr = []
         for E_Result in rankings:
-            p_value = round(E_Result.p_value, precision)
-            FDR = round(E_Result.FDR, precision)
+            if precision!=-1:
+                p_value = round(E_Result.p_value, precision)
+                FDR = round(E_Result.FDR, precision)
+            else:
+                p_value = E_Result.p_value
+                FDR = E_Result.FDR
             next_row=[E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value,FDR]
             next_row = map(str, next_row)
             output_arr.append(next_row)

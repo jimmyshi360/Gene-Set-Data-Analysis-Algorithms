@@ -1,3 +1,11 @@
+'''
+File name: mat.py
+Authors: Jimmy Shi, Partha Rao
+Date created: 6/28/2017
+Date last modified:
+Python Version: 2.7
+'''
+
 from collections import OrderedDict
 from operator import itemgetter
 from collections import defaultdict
@@ -46,6 +54,8 @@ class MAT:
         for item in self._ordered_dict:
             id_arr.append(item)
         return id_arr
+
+    #EXPERIMENTAL CONVERTERS, NOT TESTED
     def mat_to_rnk(self, output):
         output = open(output, "r+")
         output.write("\n")

@@ -1,3 +1,11 @@
+'''
+File name: overrep_tests.py
+Authors: Jimmy Shi, Partha Rao
+Date created: 6/28/2017
+Date last modified:
+Python Version: 2.7
+'''
+
 import multiprocessing
 import time
 
@@ -30,31 +38,32 @@ call multiprocess() to generate output
 
 class OverrepTest():
     def __init__(self):
+        self.test_name=args.test_name
         self.sample_sets = GMT(args.gene_sets)
         self.anno_list = GMT(args.annotation_list)
         self.background = BACKGROUND([], args.background_list)
         self.alpha = args.rate
         self.output = args.output
         self.cpu_count = args.cpu
+        self.precision = args.precision
+        self.console=args.console
+        self.significant=args.significant
 
-    def run(self, test_name, print_to_console, significant_only):
+    def run(self):
         '''
         runs an overrep test, generates an HTML table
 
-        :param str test_name: Name of the test to be run
-        :param bool print_to_console: Specifies whether or not to print to the console
-        :param bool significant_onky: Specifies whether or not to only output significant results
         :return: Nothing, printout() will only write to the specified output file and to the console if specified
         '''
 
-        t1 = time.time()
-        rankings = self.switch(test_name)
-        # passes output to the printer class
+        start_time = time.time()
+        rankings = self.switch(self.test_name)
 
+        print "Execution time: "+str(time.time()-start_time)
         #html table
-        OUT(rankings[0], rankings[1], self.output).html_table(significant_only, 3)
+        OUT(rankings[0], rankings[1], self.output).html_table(self.significant, self.precision)
         #output file and table
-        return OUT(rankings[0], rankings[1], self.output).printout(print_to_console, significant_only)
+        return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant, self.precision)
 
     def switch(self, test_name):
         '''
@@ -412,6 +421,15 @@ if __name__ == '__main__':
     parser = ArgumentParser(usage, version="%prog dev-unreleased")
 
     parser.add_argument(
+        "-n",
+        "--name of test to run",
+        dest="test_name",
+        help="options --> (fisher_exact, hypergeometric, binomial, chi_squared)",
+        metavar="STRING",
+        required=True
+    )
+
+    parser.add_argument(
         "-g",
         "--gene-sets file",
         dest="gene_sets",
@@ -433,7 +451,7 @@ if __name__ == '__main__':
         "-b",
         "--background-gene file",
         dest="background_list",
-        help="background gene list file for comparision (OPTIONAL)",
+        help="background gene list file for comparision (DEFAULT None)",
         metavar=".txt FILE"
     )
 
@@ -461,9 +479,33 @@ if __name__ == '__main__':
         metavar="INTEGER",
         type=int,
         default=1)
+    parser.add_argument(
+        "-d",
+        "--the decimal precision",
+        dest="precision",
+        help="an integer for the decimal precision (DEFAULT Full Precision)",
+        metavar="INTEGER",
+        type=int,
+        default=-1)
+    parser.add_argument(
+        "-t",
+        "--print to console",
+        dest="console",
+        help="a boolean for a print to console option (DEFAULT True)",
+        metavar="BOOLEAN",
+        type=bool,
+        default=True)
+    parser.add_argument(
+        "-s",
+        "--significant only",
+        dest="significant",
+        help="a boolean for significant only results option (DEFAULT False)",
+        metavar="BOOLEAN",
+        type=bool,
+        default=False)
 
     args = parser.parse_args()
 
     # perform a fisher_exact test with a console printout and including all values
     test = OverrepTest()
-    test.run("fisher_exact", True, False)
+    test.run()

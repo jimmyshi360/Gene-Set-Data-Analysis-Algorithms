@@ -1,3 +1,10 @@
+'''
+File name: background.py
+Authors: Jimmy Shi
+Date created: 6/28/2017
+Date last modified:
+Python Version: 2.7
+'''
 
 class BACKGROUND:
     def __init__(self, gene_set, filename=None):

@@ -1,3 +1,11 @@
+'''
+File name: enrichment_tests.py
+Authors: Jimmy Shi, Partha Rao
+Date created: 6/28/2017
+Date last modified:
+Python Version: 2.7
+'''
+
 import math
 import multiprocessing
 import sys
@@ -16,6 +24,7 @@ score_arr = []
 # general class for setting up and running an enrichment test
 class EnrichmentTest:
     def __init__(self):
+        self.test_name=args.test_name
         self.anno_list = GMT(args.annotation_list)
         self.expr_list = MAT(args.expr_list)
         self.expr_cluster = args.cluster_number
@@ -24,30 +33,30 @@ class EnrichmentTest:
         self.output = args.output
         self.weight = args.weight
         self.cpu_count=args.cpu
+        self.precision=args.precision
+        self.console=args.console
+        self.significant=args.significant
 
-    def run(self, test_name, print_to_console, significant_only):
+    def run(self):
         '''
         runs an enrichment test, generates an html table
 
-        :param str test_name: Name of the test to be run
-        :param bool print_to_console: Specifies whether or not to print to the console
-        :param bool significant_only: Specifies whether or not to output only significant values
         :return: Nothing, printout() will only write to the specified output file and to the console if specified
         '''
 
-        t1=time.time()
-        rankings = self.switch(test_name)
+        start_time=time.time()
+        rankings = self.switch(self.test_name)
         # passes output to the printer class
-        print time.time()-t1
-        if test_name == "gsea":
+        print "Execution time: "+str(time.time()-start_time)
+        if self.test_name == "gsea":
             #html table
-            OUT(rankings[0], rankings[1], self.output).html_table_GSEA(significant_only,3)
+            OUT(rankings[0], rankings[1], self.output).html_table_GSEA(self.significant,self.precision)
             #output file and console
-            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(print_to_console, significant_only)
+            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(self.console, self.significant,self.precision)
         #html table
-        OUT(rankings[0], rankings[1], self.output).html_table(significant_only,3)
+        OUT(rankings[0], rankings[1], self.output).html_table(self.significant,self.precision)
         #output file and console
-        return OUT(rankings[0], rankings[1], self.output).printout(print_to_console, significant_only)
+        return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant,self.precision)
 
     def switch(self, test_name):
         '''
@@ -449,6 +458,14 @@ if __name__ == '__main__':
     parser = ArgumentParser(usage, version="%prog dev-unreleased")
 
     parser.add_argument(
+        "-n",
+        "--name of test to run",
+        dest="test_name",
+        help="options --> (gsea, page, wilcoxon)",
+        metavar="STRING",
+        required=True
+    )
+    parser.add_argument(
         "-a",
         "--annotations-file",
         dest="annotation_list",
@@ -515,9 +532,33 @@ if __name__ == '__main__':
         metavar="INTEGER",
         type=int,
         default=1)
+    parser.add_argument(
+        "-d",
+        "--the decimal precision",
+        dest="precision",
+        help="an integer for the decimal precision (DEFAULT Full Precision)",
+        metavar="INTEGER",
+        type=int,
+        default=-1)
+    parser.add_argument(
+        "-t",
+        "--print to console",
+        dest="console",
+        help="a boolean for a print to console option (DEFAULT True)",
+        metavar="BOOLEAN",
+        type=bool,
+        default=True)
+    parser.add_argument(
+        "-s",
+        "--significant only",
+        dest="significant",
+        help="a boolean for significant only results option (DEFAULT False)",
+        metavar="BOOLEAN",
+        type=bool,
+        default=False)
 
     args = parser.parse_args()
 
     # perform a gsea test with a console printout and and including all values
     test = EnrichmentTest()
-    test.run("page", True, False)
+    test.run()
