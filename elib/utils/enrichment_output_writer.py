@@ -9,7 +9,6 @@ Python Version: 2.7
 import os
 import webbrowser
 from HTML import table
-
 # class for generating enrichment test outputs
 class OUT:
     def __init__(self, all_rankings, significant_rankings, output):
@@ -73,8 +72,7 @@ class OUT:
         :param bool precision: Specifies the decimal precision of the output, precision = 3 --> 3 decimal places, -1 will remove decimal restriction
         :return: Nothing, will only write to the table.html file and open the file in a browser
         '''
-
-        html_output=open(os.path.join("utils","table.html"), "r+")
+        html_output=open(os.path.abspath(os.path.join("../","utils","table.html")), "r+")
         self.deleteContent(html_output)
         if significant_only:
             rankings = self._significant_rankings
@@ -101,7 +99,8 @@ class OUT:
         html_output.write(table(output_arr, header_row=["Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR" , "ES", "NES"]))
         html_output.close()
 
-        path = os.path.abspath(os.path.join("utils","table.html"))
+        path = os.path.abspath(os.path.join("../","utils","table.html"))
+
         url = "file://"+path
         webbrowser.open(url)
 
@@ -156,7 +155,7 @@ class OUT:
         :return: Nothing, will only write to the table.html file and open the file in a browser
         '''
 
-        html_output=open(os.path.join("utils","table.html"), "r+")
+        html_output=open(os.path.abspath(os.path.join("../","utils","table.html")), "r+")
         self.deleteContent(html_output)
         if significant_only:
             rankings = self._significant_rankings
@@ -178,7 +177,7 @@ class OUT:
         html_output.write(table(output_arr, header_row=["Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR"]))
         html_output.close()
 
-        path = os.path.abspath(os.path.join("utils","table.html"))
+        path = os.path.abspath(os.path.join("../","utils","table.html"))
         url = "file://"+path
         webbrowser.open(url)
 
