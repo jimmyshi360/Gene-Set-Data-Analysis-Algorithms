@@ -42,6 +42,7 @@ class TestStattests(unittest.TestCase):
         gsea_result = gsea(expr_list, cluster, anno, permutations, 1.0, 1, cpu_count())
         self.assertAlmostEqual(float(gsea_result[0][0].es), 0.629079429538, delta=0.0001)
         self.assertAlmostEqual(float(gsea_result[0][1].es), 0.458915389493, delta=0.0001)
+        #ADD TESTS FOR P VALUE AND FDR Q VAL AFTER OPTIMIZING GSEA
 
     def test_enrichment_score(self):
         anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt")).genesets['GO:0070507']

@@ -23,10 +23,14 @@ class TestStattests(unittest.TestCase):
         # contingency table from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 24-26
         cont_table = gen_table(sample, anno, background)
+
+
         self.assertEqual(cont_table[0][0], 3)
         self.assertEqual(cont_table[0][1], 40)
         self.assertEqual(cont_table[1][0], 297)
         self.assertEqual(cont_table[1][1], 19960)
+
+
 
     def test_generate_inputs(self):
         anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
@@ -87,6 +91,8 @@ class TestStattests(unittest.TestCase):
         background = BACKGROUND([], os.path.join("files","unittest_files", "BACKGROUND.txt"))
 
         test_result = fisher_exact(sample, anno, 1, background, cpu_count())
+
+
         self.assertAlmostEqual(float(test_result[0][0].p_value), 0.000162523456526, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 0.00406308641316, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][1].p_value), 0.0154958566105, delta=0.0001)
@@ -136,6 +142,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 26
+
         self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0219349067622,
                                delta=0.0001)
 

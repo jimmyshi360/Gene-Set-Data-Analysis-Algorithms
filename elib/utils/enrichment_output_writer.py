@@ -27,16 +27,17 @@ class OUT:
         '''
 
         if print_to_console:
-            print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
-        self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR\tes\tnes")
+            print("\nrank\tcluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tes\tnes\tp_value\tFDR q-val")
+        self._output.write("\nrank\tcluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tes\tnes\tp_value\tFDR q-val")
 
         if significant_only:
             rankings = self._significant_rankings
         else:
             rankings = self._all_rankings
-
+        counter=1
         for i, E_Result in enumerate(rankings):
             output_arr = []
+            output_arr.append(counter)
             output_arr.append(E_Result.expr_cluster)
             output_arr.append(E_Result.expr_list_ngenes)
             output_arr.append(E_Result.anno_id)
@@ -52,16 +53,18 @@ class OUT:
                 FDR = E_Result.FDR
                 es = E_Result.es
                 nes = E_Result.nes
-            output_arr.append(p_value)
-            output_arr.append(FDR)
+
             output_arr.append(es)
             output_arr.append(nes)
+            output_arr.append(p_value)
+            output_arr.append(FDR)
             output_arr = map(str, output_arr)
 
             self._output.write('\t'.join(output_arr) + "\n")
 
             if print_to_console:
                 print('\t'.join(output_arr))
+            counter+=1
         self._output.close()
 
     def html_table_GSEA(self, significant_only,precision):
@@ -80,6 +83,7 @@ class OUT:
             rankings = self._all_rankings
 
         output_arr = []
+        counter=1
         for E_Result in rankings:
             if precision!=-1:
                 p_value = round(E_Result.p_value, precision)
@@ -92,11 +96,12 @@ class OUT:
                 es = E_Result.es
                 nes = E_Result.nes
 
-            next_row=[E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value, FDR, es,nes]
+            next_row=[counter,E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,es,nes ,p_value, FDR]
             next_row=map(str, next_row)
             output_arr.append(next_row)
+            counter+=1
 
-        html_output.write(table(output_arr, header_row=["Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR" , "ES", "NES"]))
+        html_output.write(table(output_arr, header_row=[" ","Expr Cluster", "Expr List Size", "Anno ID", "Anno Size", "ES", "NES", "P Value", "FDR q-val" ,]))
         html_output.close()
 
         path = os.path.abspath(os.path.join("../","utils","table.html"))
@@ -114,16 +119,17 @@ class OUT:
         '''
 
         if print_to_console:
-            print("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
-        self._output.write("\ncluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
+            print("\nrank\tcluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
+        self._output.write("\nrank\tcluster\texpr_list.ngenes\tannotation_id\tannotation.ngenes\tp_value\tFDR")
 
         if significant_only:
             rankings = self._significant_rankings
         else:
             rankings = self._all_rankings
-
+        counter=1
         for i, E_Result in enumerate(rankings):
             output_arr = []
+            output_arr.append(counter)
             output_arr.append(E_Result.expr_cluster)
             output_arr.append(E_Result.expr_list_ngenes)
             output_arr.append(E_Result.anno_id)
@@ -143,6 +149,7 @@ class OUT:
 
             if print_to_console:
                 print('\t'.join(output_arr))
+            counter+=1
         self._output.close()
 
 
@@ -163,6 +170,7 @@ class OUT:
             rankings = self._all_rankings
 
         output_arr = []
+        counter=1
         for E_Result in rankings:
             if precision!=-1:
                 p_value = round(E_Result.p_value, precision)
@@ -170,11 +178,12 @@ class OUT:
             else:
                 p_value = E_Result.p_value
                 FDR = E_Result.FDR
-            next_row=[E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value,FDR]
+            next_row=[counter,E_Result.expr_cluster,E_Result.expr_list_ngenes,E_Result.anno_id,E_Result.anno_ngenes,p_value,FDR]
             next_row = map(str, next_row)
             output_arr.append(next_row)
+            counter+=1
 
-        html_output.write(table(output_arr, header_row=["Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR"]))
+        html_output.write(table(output_arr, header_row=[" ","Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR"]))
         html_output.close()
 
         path = os.path.abspath(os.path.join("../","utils","table.html"))

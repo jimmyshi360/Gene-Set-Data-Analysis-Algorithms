@@ -19,6 +19,7 @@ from scipy import stats
 from elib.utils.mat import MAT
 from elib.utils.enrichment_output_writer import OUT
 
+
 score_arr = []
 
 
@@ -28,38 +29,47 @@ class EnrichmentTest:
         self.test_name=args.test_name
         self.anno_list = GMT(args.annotation_list)
         self.expr_list = MAT(args.expr_list)
-        self.expr_cluster = args.cluster_number
+        #self.expr_list.DAVID_to_gene_symbol("C:\Users\Jimmy\Documents\dev\projects\enrichments\\files\\test_files\GPL_converted_list")
+        #self.expr_list.normalize(args.cluster_number)
+        self.expr_clusters = args.cluster_array
         self.permutations = args.permutations
         self.alpha = args.rate
         self.output = args.output
         self.weight = args.weight
         self.cpu_count=args.cpu
         self.precision=args.precision
-        self.console=args.console
-        self.significant=args.significant
+        self.console=str2bool(args.console)
+        self.significant=str2bool(args.significant)
+        self.table=str2bool(args.table)
 
     def run(self):
+        start_time = time.time()
+        for cluster in self.expr_clusters:
+            self.run_c(int(cluster))
+        print "Execution time: " + str(time.time() - start_time)
+
+    def run_c(self,cluster):
         '''
         runs an enrichment test, generates an html table
 
         :return: Nothing, printout() will only write to the specified output file and to the console if specified
         '''
 
-        start_time=time.time()
-        rankings = self.switch(self.test_name)
-        # passes output to the printer class
-        print "Execution time: "+str(time.time()-start_time)
+        rankings = self.switch(self.test_name, cluster)
         if self.test_name == "gsea":
             #html table
-            OUT(rankings[0], rankings[1], self.output).html_table_GSEA(self.significant,self.precision)
+
+            if self.table:
+                OUT(rankings[0], rankings[1], self.output).html_table_GSEA(self.significant,self.precision)
             #output file and console
             return OUT(rankings[0], rankings[1], self.output).printout_GSEA(self.console, self.significant,self.precision)
         #html table
-        OUT(rankings[0], rankings[1], self.output).html_table(self.significant,self.precision)
+        if self.table:
+            OUT(rankings[0], rankings[1], self.output).html_table(self.significant,self.precision)
         #output file and console
         return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant,self.precision)
 
-    def switch(self, test_name):
+    def switch(self, test_name, cluster):
         '''
         used by the run method to match the input with the correct test
 
@@ -67,15 +77,15 @@ class EnrichmentTest:
         :return: An array of 2 items, the gene rankings and the filtered FDR rankings
         '''
         if test_name=="wilcoxon":
-            return wilcoxon(self.expr_list, self.expr_cluster, self.anno_list, self.alpha,self.cpu_count)
+            return wilcoxon(self.expr_list, cluster, self.anno_list, self.alpha,self.cpu_count)
         elif test_name == "page":
-            return page(self.expr_list, self.expr_cluster, self.anno_list, self.alpha,self.cpu_count)
+            return page(self.expr_list, cluster, self.anno_list, self.alpha,self.cpu_count)
         elif test_name == "gsea":
-            return gsea(self.expr_list, self.expr_cluster, self.anno_list, self.permutations, self.alpha, self.weight,self.cpu_count)
+            return gsea(self.expr_list, cluster, self.anno_list, self.permutations, self.alpha, self.weight,self.cpu_count)
 
 # each stat test will return an array of EnrichmentResults
 class EnrichmentResult:
-    def __init__(self, expr_cluster, expr_list_ngenes, anno_id, anno_ngenes, p_value, FDR, es=None, nes=None):
+    def __init__(self, expr_cluster, expr_list_ngenes, anno_id, anno_ngenes, p_value, FDR, es=None, nes=None, nes_null=None):
         self.expr_cluster = expr_cluster
         self.expr_list_ngenes = expr_list_ngenes
         self.anno_id = anno_id
@@ -84,7 +94,7 @@ class EnrichmentResult:
         self.FDR = FDR
         self.es = es
         self.nes = nes
-
+        self.nes_null=nes_null
 
 # each enrichment test will require an array of InputItems
 # multiprocessing will map each item in the array to a worker
@@ -154,6 +164,44 @@ def gsea(expr_list, expr_cluster, anno_list, permutations, alpha, weight, cpu_co
     input_arr = generate_inputs(anno_list, expr_cluster, expr_list, permutations, weight)
 
     gene_rankings = multiprocess(input_arr, gsea_process, cpu_count)
+
+    # create distributions and generate ratios
+    nes_nulls=[]
+    for i in range(len(gene_rankings)):
+        nes_nulls.append(gene_rankings[i].nes_null)
+    all_nes_vals = reduce(lambda x, y: x + y, nes_nulls, [])
+
+    # assign FDR values
+    sorted_nulls = np.array(sorted(all_nes_vals))
+
+    nes_scores=[]
+    for i in range(len(gene_rankings)):
+        nes_scores.append(gene_rankings[i].nes)
+    sorted_nes_scores = np.array(sorted(nes_scores))
+
+    for i in range(len(gene_rankings)):
+        nes = gene_rankings[i].nes
+        # find number of items greater than NES star and estimates of false positives
+        if nes >= 0:
+            all_pos_nes = int(len(all_nes_vals) - np.searchsorted(sorted_nulls, 0, side="left"))
+            all_pos_greater_nes = int(len(all_nes_vals) - np.searchsorted(sorted_nulls, nes, side="left"))
+            nes_pos = len(sorted_nes_scores) - int(np.searchsorted(sorted_nes_scores, 0, side="left"))
+            nes_pos_greater = len(sorted_nes_scores) - int(np.searchsorted(sorted_nes_scores, nes, side="left"))
+        else:
+            all_pos_nes = int(np.searchsorted(sorted_nulls, 0, side="left"))
+            all_pos_greater_nes = int(np.searchsorted(sorted_nulls, nes, side="right"))
+            nes_pos = int(np.searchsorted(sorted_nes_scores, 0, side="left"))
+            nes_pos_greater = int(np.searchsorted(sorted_nes_scores, nes, side="right"))
+
+        #generating ratios
+        norm = all_pos_greater_nes / float(all_pos_nes)
+        obs = nes_pos_greater / float(nes_pos)
+
+        # limit FDR to 1.0
+        FDR = norm / obs if norm / obs < 1.0  else 1.0
+        gene_rankings[i].FDR=FDR
+
+
     gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
     return [gene_rankings, significance_filter(gene_rankings, alpha)]
 
@@ -170,10 +218,10 @@ def gsea_process(input_item):
     nes = normalize_score(es, es_arr)
     nes_arr = normalize_array(es_arr)
     n_p = n_p_value(es, es_arr)
-    FDR = n_p_value(nes, nes_arr)
 
+    FDR = 0
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
-                            len(input_item.anno_list), n_p, FDR, es, nes)
+                            len(input_item.anno_list), n_p, FDR, es, nes, nes_arr)
 
 def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     '''
@@ -185,6 +233,7 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     :param int weight: GSEA weighting option
     :return: The enrichment score
     '''
+
 
     anno_map = dict.fromkeys(anno_set, 0)
     anno_map = defaultdict(int, anno_map)
@@ -201,7 +250,6 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     max_ES = -sys.maxint
     min_ES = sys.maxint
     net_sum = 0
-
     for id in expr_list.ordered_dict:
 
         if id in anno_map and len(list(rankings_map[id])) != 0:
@@ -216,7 +264,7 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
 
     return max(max_ES, abs(min_ES))
 
-
+# POSSIBLY OPTIMIZABLE
 def es_distr(expr_list, expr_cluster, anno_list, permutations):
     '''
     generates a distribution of enrichment scores through permutations
@@ -401,11 +449,12 @@ def page_process(input_item):
         row = list(input_item.expr_list.dict[id])
         if id in anno_map:
             score_arr.append(row[input_item.expr_cluster])
+
     score_arr = np.array(score_arr).astype(np.float)
     geneset_mean = np.mean(score_arr)
-    z_score = (input_item.gene_mean - geneset_mean) * math.sqrt(geneset_size) / input_item.gene_sd
 
-    p_value = stats.norm.sf(abs(z_score))
+    z_score = (input_item.gene_mean - geneset_mean) * math.sqrt(geneset_size) / input_item.gene_sd
+    p_value = stats.norm.sf(abs(z_score))*2
     return EnrichmentResult(input_item.expr_cluster, len(input_item.expr_list.dict), input_item.anno_id,
                             len(input_item.anno_list), p_value, 0)
 
@@ -451,6 +500,8 @@ def significance_filter(gene_rankings, alpha):
 
     return significant_values
 
+def str2bool(b):
+  return b.lower() in ("yes", "true", "t", "1")
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -493,10 +544,11 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "-c",
-        "--cluster number",
-        dest="cluster_number",
-        help="the cluster to run through (DEFAULT 0)",
-        metavar="INTEGER",
+        "--cluster array",
+        dest="cluster_array",
+        help="clusters to run through (DEFAULT 0, input numbers separated by spaces)",
+        metavar="LIST",
+        nargs='+',
         type=int,
         default=0)
     parser.add_argument(
@@ -541,21 +593,29 @@ if __name__ == '__main__':
         type=int,
         default=-1)
     parser.add_argument(
-        "-t",
+        "-k",
         "--print to console",
         dest="console",
-        help="a boolean for a print to console option (DEFAULT True)",
-        metavar="BOOLEAN",
-        type=bool,
-        default=True)
+        help="a boolean for a print to console option (DEFAULT True, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="True")
+    parser.add_argument(
+        "-t",
+        "--generate html table",
+        dest="table",
+        help="a boolean for generating html tables option (DEFAULT True, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="True")
     parser.add_argument(
         "-s",
         "--significant only",
         dest="significant",
-        help="a boolean for significant only results option (DEFAULT False)",
-        metavar="BOOLEAN",
-        type=bool,
-        default=False)
+        help="a boolean for significant only results option (DEFAULT False, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="False")
 
     args = parser.parse_args()
 

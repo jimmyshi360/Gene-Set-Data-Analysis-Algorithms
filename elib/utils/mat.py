@@ -5,6 +5,8 @@ Date created: 6/28/2017
 Date last modified:
 Python Version: 2.7
 '''
+import random
+import numpy
 
 from collections import OrderedDict
 from operator import itemgetter
@@ -20,7 +22,10 @@ class MAT:
             for line in matfile:
                 tok = line.strip().split('\t')
 
-                if tok[0] != "human_entrez":
+                if tok[0] != "human_entrez" and tok[0] != "\"ID_REF\"":
+                    if "\"" in tok[0]:
+                        tok[0]=tok[0][1:len(tok[0])-1]
+                    tok[0]=tok[0].lower()
                     self._dictionary[tok[0]]= tok[1:]
                     self._dict[tok[0]]= tok[1:]
                 else:
@@ -28,6 +33,31 @@ class MAT:
                         self._labels.append(tok[i])
 
         self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
+
+    def DAVID_to_gene_symbol(self, file):
+        file=open(file,"r+")
+        temp_dict=defaultdict()
+        temp_dictionary={}
+        for line in file:
+            tok = line.strip().split('\t')
+            temp_dictionary[tok[1]]=self._dictionary[tok[0].lower()]
+            temp_dict[tok[1]] = self._dict[tok[0].lower()]
+        self._dict=temp_dict
+        self._dictionary=temp_dictionary
+        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
+
+    def normalize(self , column):
+
+        sum=0
+        for id in self._dict:
+            sum+=float(self._dict[id][column])
+        factor=1000/(sum/len(self._dict))
+        for id in self._dict:
+
+            self._dict[id][column]=float(self._dict[id][column])*factor
+            if float(self._dict[id][column])*factor<100:
+                self._dict[id][column]=100
+            self._dict[id][column] = numpy.log2(self._dict[id][column])
 
     @property
     def dict(self):
@@ -54,6 +84,12 @@ class MAT:
         for item in self._ordered_dict:
             id_arr.append(item)
         return id_arr
+
+    def ids_to_file(self, file):
+        file=open(file, "r+")
+
+        for item in self._ordered_dict:
+            file.write(item+"\t")
 
     #EXPERIMENTAL CONVERTERS, NOT TESTED
     def mat_to_rnk(self, output):

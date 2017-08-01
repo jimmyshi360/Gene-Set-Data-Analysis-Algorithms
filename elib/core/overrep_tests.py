@@ -47,8 +47,9 @@ class OverrepTest():
         self.output = args.output
         self.cpu_count = args.cpu
         self.precision = args.precision
-        self.console=args.console
-        self.significant=args.significant
+        self.console=str2bool(args.console)
+        self.significant=str2bool(args.significant)
+        self.table=str2bool(args.table)
 
     def run(self):
         '''
@@ -62,7 +63,8 @@ class OverrepTest():
 
         print "Execution time: "+str(time.time()-start_time)
         #html table
-        OUT(rankings[0], rankings[1], self.output).html_table(self.significant, self.precision)
+        if self.table:
+            OUT(rankings[0], rankings[1], self.output).html_table(self.significant, self.precision)
         #output file and table
         return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant, self.precision)
 
@@ -164,20 +166,20 @@ def gen_table(sample_set, anno_set, background):
     :return: 2 dimensional table as described at the top of the program
     '''
 
-    if background is None:
+    if len(background.background_genes)==0:
         background = BACKGROUND(anno_set.intersection(sample_set))
 
     list_anno_overlaps = len(sample_set.intersection(anno_set))
     if list_anno_overlaps == 0:
         return -1
     # alternative code for other specifications
-    # background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if background == None else len(background.background_genes)
+    #background_size = len(sample_set) + len(anno_set) - list_anno_overlaps if len(background.background_genes) ==0 else len(background.background_genes)
 
     background_size = len(background.background_genes)
 
     list_genome_overlaps = len(sample_set) - list_anno_overlaps
     # alternative code for other specifications
-    # genome_anno_overlaps = len(anno_set.intersection(background.background_genes)) if background != None else len(anno_set)
+    #genome_anno_overlaps = len(anno_set.intersection(background.background_genes)) if len(background.background_genes) !=0 else len(anno_set)
     genome_anno_overlaps = len(anno_set.intersection(background.background_genes))
     genome_only = background_size - genome_anno_overlaps
 
@@ -224,6 +226,7 @@ def fisher_process(input_item):
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = cont_table[0][0]
+
     p_value = stats.fisher_exact(cont_table)[1]
 
     return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
@@ -414,6 +417,8 @@ def significance_filter(gene_rankings, alpha):
 
     return significant_values
 
+def str2bool(b):
+  return b.lower() in ("yes", "true", "t", "1")
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -486,21 +491,29 @@ if __name__ == '__main__':
         type=int,
         default=-1)
     parser.add_argument(
-        "-t",
+        "-k",
         "--print to console",
         dest="console",
-        help="a boolean for a print to console option (DEFAULT True)",
-        metavar="BOOLEAN",
-        type=bool,
-        default=True)
+        help="a boolean for a print to console option (DEFAULT True, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="True")
+    parser.add_argument(
+        "-t",
+        "--generate html table",
+        dest="table",
+        help="a boolean for generating html tables option (DEFAULT True, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="True")
     parser.add_argument(
         "-s",
         "--significant only",
         dest="significant",
-        help="a boolean for significant only results option (DEFAULT False)",
-        metavar="BOOLEAN",
-        type=bool,
-        default=False)
+        help="a boolean for significant only results option (DEFAULT False, enter a boolean as a string (ex, True))",
+        metavar="STRING",
+        type=str,
+        default="False")
 
     args = parser.parse_args()
 
