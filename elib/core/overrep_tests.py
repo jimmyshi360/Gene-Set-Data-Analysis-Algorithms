@@ -64,9 +64,9 @@ class OverrepTest():
         print "Execution time: "+str(time.time()-start_time)
         #html table
         if self.table:
-            OUT(rankings[0], rankings[1], self.output).html_table(self.significant, self.precision)
+            OUT(rankings[0], rankings[1], self.output,self.test_name).html_table(self.significant, self.precision)
         #output file and table
-        return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant, self.precision)
+        return OUT(rankings[0], rankings[1], self.output,self.test_name).printout(self.console, self.significant, self.precision)
 
     def switch(self, test_name):
         '''
@@ -203,7 +203,6 @@ def fisher_exact(sample_sets, anno, alpha, background, cpu_count):
     map_arr = generate_inputs(anno, background)
 
     for gsid in sample_sets.genesets:
-
         # each subprocess will append its results to the input_item array
         input_items = multiprocess(gsid, sample_sets, map_arr, fisher_process, cpu_count)
         for input_item in input_items:
@@ -226,7 +225,6 @@ def fisher_process(input_item):
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = cont_table[0][0]
-
     p_value = stats.fisher_exact(cont_table)[1]
 
     return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
@@ -328,7 +326,7 @@ def binomial_process(input_item):
 
 def chi_squared(sample_sets, anno, alpha, background, cpu_count):
     '''
-    the chi squared test
+    the chi squared test with Yates' correction
 
     :param GMT sample_sets: Sample set object
     :param GMT anno: Annotation set object
@@ -365,7 +363,7 @@ def chi_process(input_item):
         return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                              1.0, 0, 0)
     list_anno_overlaps = table[0][0]
-    p_value = stats.chisquare(table)[1][0]
+    p_value = stats.chi2_contingency(table)[1]
     return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                          p_value, list_anno_overlaps, 0)
 

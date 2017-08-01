@@ -11,11 +11,12 @@ import webbrowser
 from HTML import table
 # class for generating enrichment test outputs
 class OUT:
-    def __init__(self, all_rankings, significant_rankings, output):
+    def __init__(self, all_rankings, significant_rankings, output, test_name):
         self._all_rankings = all_rankings
         self._output = open(output, "r+")
         self.deleteContent(self._output)
         self._significant_rankings = significant_rankings
+        self._test_name=test_name
 
     def printout_GSEA(self, print_to_console, significant_only, precision):
         '''
@@ -100,7 +101,7 @@ class OUT:
             next_row=map(str, next_row)
             output_arr.append(next_row)
             counter+=1
-
+        html_output.write("<p>"+self._test_name.upper()+"</p>")
         html_output.write(table(output_arr, header_row=[" ","Expr Cluster", "Expr List Size", "Anno ID", "Anno Size", "ES", "NES", "P Value", "FDR q-val" ,]))
         html_output.close()
 
@@ -182,7 +183,7 @@ class OUT:
             next_row = map(str, next_row)
             output_arr.append(next_row)
             counter+=1
-
+        html_output.write("<p>" + self._test_name.upper() + "</p>")
         html_output.write(table(output_arr, header_row=[" ","Expr Cluster", "Expr List Size", "Anno ID", "Anno Size","P Value", "FDR"]))
         html_output.close()
 

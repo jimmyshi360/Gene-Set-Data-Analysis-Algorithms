@@ -115,14 +115,14 @@ class TestStattests(unittest.TestCase):
         test_result = chi_squared(sample, anno, 1, background, cpu_count())
         self.assertAlmostEqual(float(test_result[0][0].p_value), 2.463009591e-12, delta=0.0001)
         self.assertAlmostEqual(float(test_result[0][0].FDR), 6.15752397749e-11, delta=0.0001)
-        self.assertAlmostEqual(float(test_result[0][1].p_value), 1.07544595815e-10, delta=0.0001)
-        self.assertAlmostEqual(float(test_result[0][1].FDR), 8.96204965125e-10, delta=0.0001)
+        self.assertAlmostEqual(float(test_result[0][1].p_value), 0.00010410152966171686, delta=0.0001)
+        self.assertAlmostEqual(float(test_result[0][1].FDR), 0.0013012691207714606, delta=0.0001)
 
         anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
         sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
         background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
 
-        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value), 1.27701446634e-64,
+        self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.018327328402471026,
                                delta=0.0001)
 
     def test_hypergeometric(self):

@@ -60,14 +60,14 @@ class EnrichmentTest:
             #html table
 
             if self.table:
-                OUT(rankings[0], rankings[1], self.output).html_table_GSEA(self.significant,self.precision)
+                OUT(rankings[0], rankings[1], self.output, self.test_name).html_table_GSEA(self.significant,self.precision)
             #output file and console
-            return OUT(rankings[0], rankings[1], self.output).printout_GSEA(self.console, self.significant,self.precision)
+            return OUT(rankings[0], rankings[1], self.output, self.test_name).printout_GSEA(self.console, self.significant,self.precision)
         #html table
         if self.table:
-            OUT(rankings[0], rankings[1], self.output).html_table(self.significant,self.precision)
+            OUT(rankings[0], rankings[1], self.output, self.test_name).html_table(self.significant,self.precision)
         #output file and console
-        return OUT(rankings[0], rankings[1], self.output).printout(self.console, self.significant,self.precision)
+        return OUT(rankings[0], rankings[1], self.output, self.test_name).printout(self.console, self.significant,self.precision)
 
     def switch(self, test_name, cluster):
         '''
