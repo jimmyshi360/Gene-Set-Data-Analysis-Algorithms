@@ -34,6 +34,7 @@ class MAT:
 
         self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
 
+    # EXPERIMENTAL TEMP METHODS
     def DAVID_to_gene_symbol(self, file):
         file=open(file,"r+")
         temp_dict=defaultdict()
@@ -46,6 +47,7 @@ class MAT:
         self._dictionary=temp_dictionary
         self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
 
+    # EXPERIMENTAL TEMP METHODS
     def normalize(self , column):
 
         sum=0
@@ -72,7 +74,7 @@ class MAT:
         return self._labels
 
     def sort(self,column):
-        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(column + 1)))
+        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
 
     def scores(self,column):
         score_arr=[]

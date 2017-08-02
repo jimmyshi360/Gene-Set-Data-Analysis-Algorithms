@@ -82,6 +82,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 25
+        print "binomial p-value = "+str(binomial(sample, anno, 1, background, cpu_count())[0][0].p_value)
         self.assertAlmostEqual(float(binomial(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0229768421702,
                                delta=0.0001)
 
@@ -104,6 +105,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 24
+        print "fisher exact p-value = "+str(fisher_exact(sample, anno, 1, background, cpu_count())[0][0].p_value)
         self.assertAlmostEqual(float(fisher_exact(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0255246814673,
                                delta=0.0001)
 
@@ -121,7 +123,7 @@ class TestStattests(unittest.TestCase):
         anno = GMT(os.path.join("files","unittest_files", "test_go.gmt"))
         sample = GMT(os.path.join("files","unittest_files", "test_gmt.gmt"))
         background = BACKGROUND([], os.path.join("files","unittest_files", "test_background.txt"))
-
+        print "chi squared p-value = "+str(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value)
         self.assertAlmostEqual(float(chi_squared(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.018327328402471026,
                                delta=0.0001)
 
@@ -142,7 +144,7 @@ class TestStattests(unittest.TestCase):
 
         # results from http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
         # slide 26
-
+        print "hypergeometric p-value = "+str(hypergeometric(sample, anno, 1, background, cpu_count())[0][0].p_value)
         self.assertAlmostEqual(float(hypergeometric(sample, anno, 1, background, cpu_count())[0][0].p_value), 0.0219349067622,
                                delta=0.0001)
 
