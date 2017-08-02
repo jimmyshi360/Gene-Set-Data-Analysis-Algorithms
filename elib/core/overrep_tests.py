@@ -62,6 +62,8 @@ class OverrepTest():
         rankings = self.switch(self.test_name)
 
         print "Execution time: "+str(time.time()-start_time)
+
+
         #html table
         if self.table:
             OUT(rankings[0], rankings[1], self.output,self.test_name).html_table(self.significant, self.precision)
@@ -84,6 +86,9 @@ class OverrepTest():
             return binomial(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
         elif test_name == "hypergeometric":
             return hypergeometric(self.sample_sets, self.anno_list, self.alpha, self.background, self.cpu_count)
+        else:
+            print "Test not found!"
+            quit()
 
 
 # each stat test will return an array of OverrepResults
@@ -208,6 +213,7 @@ def fisher_exact(sample_sets, anno, alpha, background, cpu_count):
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
+    final_rankings = sorted(final_rankings, key=lambda line: float(line.FDR))
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 def fisher_process(input_item):
@@ -226,7 +232,6 @@ def fisher_process(input_item):
                              1.0, 0, 0)
     list_anno_overlaps = cont_table[0][0]
     p_value = stats.fisher_exact(cont_table)[1]
-
     return OverrepResult(input_item.gsid, len(input_item.gene_set), input_item.anno_id, len(input_item.anno_list),
                          p_value, list_anno_overlaps, 0)
 
@@ -254,6 +259,7 @@ def hypergeometric(sample_sets, anno, alpha, background, cpu_count):
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
+    final_rankings = sorted(final_rankings, key=lambda line: float(line.FDR))
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 
@@ -299,6 +305,7 @@ def binomial(sample_sets, anno, alpha, background, cpu_count):
         for input_item in input_items:
             gene_rankings.append(input_item)
     final_rankings = benjamini_hochberg(gene_rankings)
+    final_rankings = sorted(final_rankings, key=lambda line: float(line.FDR))
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 
@@ -346,6 +353,7 @@ def chi_squared(sample_sets, anno, alpha, background, cpu_count):
             gene_rankings.append(input_item)
 
     final_rankings = benjamini_hochberg(gene_rankings)
+    final_rankings = sorted(final_rankings, key=lambda line: float(line.FDR))
     return [final_rankings, significance_filter(final_rankings, alpha)]
 
 def chi_process(input_item):

@@ -62,7 +62,7 @@ class TestStattests(unittest.TestCase):
 
         wilcoxon_result=wilcoxon(expr_list, cluster, anno, 1, cpu_count())
         self.assertAlmostEqual(float(wilcoxon_result[0][0].p_value), 1.1206994619e-10, delta=0.0001)
-        self.assertAlmostEqual(float(wilcoxon_result[0][1].p_value), 0.002463584445950147, delta=0.0001)
+        self.assertAlmostEqual(float(wilcoxon_result[0][1].p_value), 0.0026701906744509285, delta=0.0001)
 
     def test_page(self):
         anno = GMT(os.path.join("files","unittest_files", "GO_shortened.gmt"))

@@ -82,6 +82,9 @@ class EnrichmentTest:
             return page(self.expr_list, cluster, self.anno_list, self.alpha,self.cpu_count)
         elif test_name == "gsea":
             return gsea(self.expr_list, cluster, self.anno_list, self.permutations, self.alpha, self.weight,self.cpu_count)
+        else:
+            print "Test not found!"
+            quit()
 
 # each stat test will return an array of EnrichmentResults
 class EnrichmentResult:
@@ -202,7 +205,7 @@ def gsea(expr_list, expr_cluster, anno_list, permutations, alpha, weight, cpu_co
         gene_rankings[i].FDR=FDR
 
 
-    gene_rankings = sorted(gene_rankings, key=lambda line: float(line.p_value))
+    gene_rankings = sorted(gene_rankings, key=lambda line: float(line.FDR))
     return [gene_rankings, significance_filter(gene_rankings, alpha)]
 
 def gsea_process(input_item):
@@ -371,6 +374,7 @@ def wilcoxon(expr_list, expr_cluster, anno_list, alpha, cpu_count):
     gene_rankings = multiprocess(input_arr, wilcoxon_process, cpu_count)
 
     rankings_final = benjamini_hochberg(gene_rankings)
+    rankings_final = sorted(rankings_final, key=lambda line: float(line.FDR))
     return [rankings_final, significance_filter(rankings_final, alpha)]
 
 def wilcoxon_process(input_item):
@@ -430,6 +434,7 @@ def page(expr_list, expr_cluster, anno_list, alpha, cpu_count):
     gene_rankings = multiprocess(input_arr_copy, page_process, cpu_count)
 
     rankings_final = benjamini_hochberg(gene_rankings)
+    rankings_final = sorted(rankings_final, key=lambda line: float(line.FDR))
     return [rankings_final, significance_filter(rankings_final, alpha)]
 
 def page_process(input_item):
