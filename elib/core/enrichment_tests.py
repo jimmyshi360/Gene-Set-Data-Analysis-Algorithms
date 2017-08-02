@@ -19,7 +19,6 @@ from scipy import stats
 from elib.utils.mat import MAT
 from elib.utils.enrichment_output_writer import OUT
 
-
 score_arr = []
 
 
@@ -241,21 +240,20 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
     anno_map = defaultdict(int, anno_map)
     rankings_map = expr_list.dict
 
+
     Nhint = len(anno_set)
     N = len(expr_list.dict)
     set_score_sum = 0
-
     for id in anno_set:
         if id in rankings_map and len(list(rankings_map[id])) != 0:
-            set_score_sum += (float(list(rankings_map[id])[expr_cluster])) ** weight
+            set_score_sum += abs((float(list(rankings_map[id])[expr_cluster])) ** weight)
 
     max_ES = -sys.maxint
     min_ES = sys.maxint
     net_sum = 0
     for id in expr_list.ordered_dict:
-
         if id in anno_map and len(list(rankings_map[id])) != 0:
-            net_sum += (float(list(rankings_map[id])[expr_cluster])) ** weight / set_score_sum
+            net_sum += abs((float(list(rankings_map[id])[expr_cluster])) ** weight / set_score_sum)
         elif len(list(rankings_map[id])) != 0:
             net_sum += -1.0 / (N - Nhint)
 
@@ -263,7 +261,6 @@ def enrichment_score(anno_set, expr_cluster, expr_list, weight):
             max_ES = net_sum
         if net_sum < min_ES:
             min_ES = net_sum
-
     return max(max_ES, abs(min_ES))
 
 # POSSIBLY OPTIMIZABLE

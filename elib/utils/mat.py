@@ -74,7 +74,7 @@ class MAT:
         return self._labels
 
     def sort(self,column):
-        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=lambda item: item[1][column]))
+        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=lambda item: float(item[1][column]),reverse=True))
 
     def scores(self,column):
         score_arr=[]
@@ -93,15 +93,14 @@ class MAT:
         for item in self._ordered_dict:
             file.write(item+"\t")
 
-    #EXPERIMENTAL CONVERTERS, NOT TESTED
-    def mat_to_rnk(self, output):
+    def mat_to_rnk(self, output, column):
         output = open(output, "r+")
         output.write("\n")
 
         for i in self._dict.keys():
-            output.write(str(i) + "\t" + str(self._dict[i][0]))
+            output.write(str(i) + "\t" + str(self._dict[i][column]))
             output.write("\n")
-
+    # EXPERIMENTAL
     def mat_to_gct(self, output):
         output = open(output, "r+")
 
