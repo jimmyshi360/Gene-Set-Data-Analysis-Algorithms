@@ -54,7 +54,6 @@ class EnrichmentTest:
 
         :return: Nothing, printout() will only write to the specified output file and to the console if specified
         '''
-
         rankings = self.switch(self.test_name, cluster)
         if self.test_name == "gsea":
             #html table

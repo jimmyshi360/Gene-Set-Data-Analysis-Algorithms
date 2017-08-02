@@ -74,7 +74,7 @@ class MAT:
         return self._labels
 
     def sort(self,column):
-        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=itemgetter(1)))
+        self._ordered_dict = OrderedDict(sorted(self._dictionary.items(), key=lambda item: item[1][column]))
 
     def scores(self,column):
         score_arr=[]
