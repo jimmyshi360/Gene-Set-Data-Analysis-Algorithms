@@ -18,23 +18,23 @@ Project is pip installable via the github link
 
 Statistical methods included:
 ```
-__Overrepresentation analysis tests:__
+Overrepresentation analysis tests:
 * Fisher exact
 * Binomial
 * Chi squared
 * Hypergeometric
 
-__Data inputs:__
+Data inputs:
 * Gene annotations (.gmt)
 * Gene set sample (.gmt)
 * Optional background genes (.txt)
 
-__Enrichment analysis tests:__
+Enrichment analysis tests:
 * Gene Set Enrichment Analysis (GSEA)
 * Parametric Analysis of Geneset Expression (PAGE)
 * Wilcoxon ranksum test
 
-__Data inputs:__
+Data inputs:
 * Gene annotations (.gmt)
 * Expression list (.mat)
 ```
