@@ -1,6 +1,6 @@
 # Enrichments tests for genomic data analysis
 
-One Paragraph of project description goes here
+This repository contains a collection of statistical tests for enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers.
 
 ## Getting Started
 
@@ -45,7 +45,10 @@ Data inputs:
 
 ## Versioning
 
-Version 2.0
+```
+Python 2.7
+Project version 2.0
+```
 
 ## Authors
 
