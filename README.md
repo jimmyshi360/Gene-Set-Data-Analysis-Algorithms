@@ -10,20 +10,33 @@ These instructions will get you a copy of the project up and running on your loc
 
 Requirements are listed in the requirements.txt
 
-```
-Give examples
-```
-
 ### Installing
 
 Project is pip installable via the github link
 
 ## Running the tests
 
-*Statistical methods included:
+Statistical methods included:
 
-*Overrepresentation analysis tests:
+Overrepresentation analysis tests:
+* Fisher exact
+* Binomial
+* Chi squared
+* Hypergeometric
 
+Data inputs:
+* Gene annotations (.gmt)
+* Gene set sample (.gmt)
+* Optional background genes (.txt)
+
+Enrichment analysis tests:
+* Gene Set Enrichment Analysis (GSEA)
+* Parametric Analysis of Geneset Expression (PAGE)
+* Wilcoxon ranksum test
+
+Data inputs:
+* Gene annotations (.gmt)
+* Expression list (.mat)
 
 ## Built With
 
