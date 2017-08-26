@@ -17,7 +17,7 @@ Project is pip installable via the github link
 ## Running the tests
 
 Statistical methods included:
-
+```
 Overrepresentation analysis tests:
 * Fisher exact
 * Binomial
@@ -37,7 +37,7 @@ Enrichment analysis tests:
 Data inputs:
 * Gene annotations (.gmt)
 * Expression list (.mat)
-
+```
 ## Built With
 
 * [Scipy](https://www.scipy.org/) - Scientific python library
@@ -55,7 +55,7 @@ See also the list of [contributors](https://github.com/SpecOps167/enrichments/gr
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GNU General Public License License - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 
