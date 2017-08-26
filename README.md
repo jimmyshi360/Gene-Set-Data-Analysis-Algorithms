@@ -11,6 +11,11 @@ Statistical methods included:
 -Parametric Analysis of Geneset Enrichment (PAGE)
 -Wilcoxon ranksum test
 
+Data input formats:
+-Expression data: .mat
+-Gene sets data: .gmt
+-Background gene data: .txt
+
 ## Setup
 ```
 # setup a virtualenv
