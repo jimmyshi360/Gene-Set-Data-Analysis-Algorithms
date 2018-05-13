@@ -6,7 +6,7 @@ The end goal is to connect these methods with an online open source tool for res
 
 Multiprocessing is supported on local machines with the workload for each method split among "x" number of processors. Currently, annotation gene sets are divided evenly if possible among a multithreaded core.
 
-Link to research presentation: https://docs.google.com/presentation/d/1rApoKuPSkaxc1AxJqH6cGmBFa0JcARlAPCm893c_WME/edit#slide=id.g235264b33b_0_160
+Link to research presentation: https://docs.google.com/presentation/d/1rApoKuPSkaxc1AxJqH6cGmBFa0JcARlAPCm893c_WME/edit#slide=id.p
 
 ![alt text](https://image.ibb.co/fD0i1J/flowchart.png)
 
