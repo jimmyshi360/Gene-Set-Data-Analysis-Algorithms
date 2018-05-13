@@ -1,6 +1,6 @@
 # Enrichment tests for genomic data analysis
 
-This repository contains a collection of statistical tests for the enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers.
+This repository contains a collection of statistical tests for the enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers. The main methods are located under "elib/core".
 
 The end goal is to connect these methods with an online open source tool for researchers to use. Seven major methods are complete, supporting Cloud computing with room for optimization.
 
