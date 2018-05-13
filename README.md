@@ -2,6 +2,8 @@
 
 This repository contains a collection of statistical tests for the enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers.
 
+The end goal is to connect these methods with an online open source tool for researchers to use. Seven major methods are complete, supporting Cloud computing with room for optimization.
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
