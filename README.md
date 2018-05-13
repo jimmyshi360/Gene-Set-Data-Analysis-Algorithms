@@ -1,4 +1,4 @@
-# Enrichments tests for genomic data analysis
+# Enrichment tests for genomic data analysis
 
 This repository contains a collection of statistical tests for the enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers.
 
@@ -53,7 +53,7 @@ Project version 2.0
 ## Authors
 
 * **Mingze Shi - Lead programmer** 
-* **Partha Rao - Assisting programmer for Wilcoxon and Binomial tests** 
+* **Partha Rao - Assistant programmer for Wilcoxon and Binomial tests** 
 See also the list of [contributors](https://github.com/SpecOps167/enrichments/graphs/contributors) who participated in this project.
 
 ## License
