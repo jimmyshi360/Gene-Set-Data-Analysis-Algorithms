@@ -2,13 +2,13 @@
 
 This repository contains a collection of statistical tests for the enrichment analysis of gene data sets.  This project is fully documented and supported on Python 2.7 compilers. The main methods are located under "elib/core".
 
+![alt text](https://image.ibb.co/fD0i1J/flowchart.png)
+
 The end goal is to connect these methods with an online open source tool for researchers to use. Seven major methods are complete, supporting Cloud computing with room for optimization.
 
 Multiprocessing is supported on local machines with the workload for each method split among "x" number of processors. Currently, annotation gene sets are divided evenly if possible among a multithreaded core.
 
 Link to research presentation: https://docs.google.com/presentation/d/1rApoKuPSkaxc1AxJqH6cGmBFa0JcARlAPCm893c_WME/edit#slide=id.p
-
-![alt text](https://image.ibb.co/fD0i1J/flowchart.png)
 
 ## Getting Started
 
