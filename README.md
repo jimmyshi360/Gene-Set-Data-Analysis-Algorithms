@@ -55,7 +55,7 @@ Data inputs:
 
 ```
 Python 2.7
-Project version 2.0
+Project version 2.1.0
 ```
 
 ## Authors
