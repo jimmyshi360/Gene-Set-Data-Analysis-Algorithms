@@ -14,15 +14,24 @@ Link to research presentation: https://docs.google.com/presentation/d/1rApoKuPSk
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-### Prerequisites
-
-Check requirements.txt
-
-### Installing
+### Installation
 
 Project is pip installable via the github link
 
-## Running the tests
+## Example Usage
+
+### Example Usage
+
+```python
+  enrichment_test = EnrichmentTest(name, GMT_list, MAT_list, clusters, permutations,  alpha, output, weight, cpu_count);
+  enrichment_test.run()
+```
+
+Or run it in a CLI with:
+
+```
+  python enrichment_tests.py -n name -a GMT_list -e MAT_list -c clusters -p permutations -r alpha -o output -w weight -i cpu_count
+```
 
 Statistical methods included:
 ```
