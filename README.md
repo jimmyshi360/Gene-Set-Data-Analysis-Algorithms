@@ -60,7 +60,7 @@ Project version 2.1.0
 
 ## Authors
 
-* **Mingze Shi - Lead programmer** 
+* **Jimmy Shi - Lead programmer** 
 * **Partha Rao - Assistant programmer for Wilcoxon and Binomial tests** 
 See also the list of [contributors](https://github.com/SpecOps167/enrichments/graphs/contributors) who participated in this project.
 
