@@ -54,6 +54,18 @@ Enrichment analysis tests:
 Data inputs:
 * Gene annotations (.gmt)
 * Expression list (.mat)
+
+For each method, provide the name of the method to the EnrichmentTest constructor (or OverrepTest):
+--Overrep--
+-fisher_exact
+-chi_squared
+-binomial
+-hypergeometric
+
+--Enrichment--
+-gsea
+-wilcoxon
+-page
 ```
 ## Built With
 
